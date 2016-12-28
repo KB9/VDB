@@ -1,6 +1,6 @@
 #include "DwarfCpp.hpp"
 
-// FOWARD DECLARATION
+// FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
 static void simple_error_handler(Dwarf_Error error, Dwarf_Ptr errarg)
@@ -87,87 +87,4 @@ void DebugInfo::loadCUHeaders(Dwarf_Debug dbg)
 std::vector<std::unique_ptr<CUHeader>> &DebugInfo::getCUHeaders()
 {
 	return headers;
-}
-
-
-
-
-
-CUHeader::CUHeader(Dwarf_Debug dbg)
-{
-	Dwarf_Die no_die = 0, cu_die;
-	Dwarf_Error err;
-
-	// Expect the CU to have a single sibling - a DIE.
-	if (dwarf_siblingof(dbg, no_die, &cu_die, &err) == DW_DLV_ERROR)
-		procmsg("[DWARF_ERROR] Error getting sibling of CU! %s\n", dwarf_errmsg(err));
-
-	// Initialize the root DIE and assign its internal type
-	root_die = std::make_unique<DebuggingInformationEntry>(dbg, cu_die);
-}
-
-
-
-
-
-DebuggingInformationEntry::DebuggingInformationEntry(Dwarf_Debug dbg, Dwarf_Die die)
-{
-	this->die = die;
-
-	loadTag(dbg);
-	
-	loadChildren(dbg);
-}
-
-void DebuggingInformationEntry::loadChildren(Dwarf_Debug dbg)
-{
-	// Check that this DIE has at least 1 child
-	Dwarf_Die child_die;
-	Dwarf_Error err;
-	int result = dwarf_child(die, &child_die, &err);
-
-	// TODO: Perform more extensive error handling here
-	if (result != DW_DLV_OK)
-	{
-		return;
-	}
-
-	// Add the confirmed 1 child to the list of children
-	children.push_back(std::make_unique<DebuggingInformationEntry>(dbg, child_die));
-
-	// Go over all children DIEs
-	while (1)
-	{
-		// Get the next DIE sibling along
-		result = dwarf_siblingof(dbg, child_die, &child_die, &err);
-
-		// TODO: Perform more extensive error handling here
-		if (result != DW_DLV_OK)
-		{
-			break; // Done
-		}
-
-		// Add the child's sibling DIE to the list of children
-		children.push_back(std::make_unique<DebuggingInformationEntry>(dbg, child_die));
-	}
-}
-
-void DebuggingInformationEntry::loadTag(Dwarf_Debug dbg)
-{
-	const char *tag_name = 0;
-	Dwarf_Half tag;
-	Dwarf_Error err;
-	
-	if (dwarf_tag(die, &tag, &err))
-		procmsg("[DWARF_ERROR] Error in dwarf_tag!\n");
-
-	if (dwarf_get_TAG_name(tag, &tag_name) != DW_DLV_OK)
-		procmsg("[DWARF_ERROR] Error in dwarf_get_TAG_name!\n");
-
-	procmsg("[DWARF] DIE tag name: %s\n", tag_name);
-}
-
-std::vector<std::unique_ptr<DebuggingInformationEntry>> &DebuggingInformationEntry::getChildren()
-{
-	return children;
 }
