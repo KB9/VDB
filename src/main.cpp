@@ -94,7 +94,7 @@ void run_debugger(pid_t child_pid)
 	procmsg("Entry point. EIP = 0x%08x\n", getChildInstructionPointer(child_pid));
 
 	// DEBUG: Set a breakpoint after child has reached its first instruction
-	Breakpoint breakpoint(child_pid, (void *)0x400567); // For ../../../testchild
+	Breakpoint breakpoint(child_pid, (void *)0x400566); // For ../../../testchild
 	
 	while (true)
 	{	
@@ -133,7 +133,7 @@ void run_debugger(pid_t child_pid)
 			}
 			else
 			{
-				procmsg("[DEBUG] Child process stopped - unknown signal!\n");
+				procmsg("[DEBUG] Child process stopped - unknown signal! (%d)\n", last_sig);
 				
 				// TODO: Check for other last signal types
 				break; // TODO: I should really continue - but that causes it to loop forever

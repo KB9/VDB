@@ -18,7 +18,7 @@ public:
 	}
 
 private:
-	virtual void onAttributeLoaded(Dwarf_Attribute attr, Dwarf_Half attr_code) override;
+	virtual void onAttributeLoaded(Dwarf_Attribute attr, Dwarf_Half attr_code, Dwarf_Half form) override;
 
 public:
 	// Function name
@@ -27,5 +27,10 @@ public:
 	// Function entry address
 	unsigned int lowpc;
 	
+	// DWARF: The size of the function
+	// DWARF 2: The function end address
 	unsigned int highpc;
+
+	// The line number the function is implemented at
+	unsigned int line_number;
 };

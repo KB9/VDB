@@ -93,8 +93,13 @@ void DebuggingInformationEntry::loadAttributes()
 		if (dwarf_whatattr(attrs[i], &attr_code, &err) != DW_DLV_OK)
 			procmsg("[DWARF_ERROR] Error in dwarf_whatattr!\n");
 
+		// Determine the form of the attribute
+		Dwarf_Half form;
+		if (dwarf_whatform(attrs[i], &form, &err) != DW_DLV_OK)
+			procmsg("[DWARF_ERROR] Error in dwarf_whatform!\n");
+
 		// Notify subclasses that an attribute has been found
-		onAttributeLoaded(attrs[i], attr_code);
+		onAttributeLoaded(attrs[i], attr_code, form);
 	}
 }
 

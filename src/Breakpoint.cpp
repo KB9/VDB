@@ -31,7 +31,8 @@ void Breakpoint::enable(pid_t pid)
 // enabling this breakpoint.
 void Breakpoint::disable(pid_t pid)
 {
-	unsigned data = ptrace(PTRACE_PEEKTEXT, pid, addr, 0);
+	uint64_t data = ptrace(PTRACE_PEEKTEXT, pid, addr, 0);
+
     // Ensure that the instruction being replaced is a trap 'int 3' breakpoint instruction
 	assert((data & 0xFF) == 0xCC);
 	ptrace(PTRACE_POKETEXT, pid, addr, (data & ~(0xFF)) | (orig_data & 0xFF));
@@ -40,12 +41,7 @@ void Breakpoint::disable(pid_t pid)
 	procmsg("[DEBUG] Post-disabled data at 0x%08x: 0x%08x\n", addr, ptrace(PTRACE_PEEKTEXT, pid, addr, 0));
 }
 
-// TODO: Think about this function.
-// The single-step and re-enabling is required before execution of the child
-// process can continue. However, should this function be the one responsible
-// for resuming execution? The callee should probably continue and listen for
-// SIGTRAP, and then look at all enabled breakpoints to determine which one
-// it should resume from.
+// Disables this breakpoint, steps over it and then re-enables the breakpoint.
 bool Breakpoint::stepOver(pid_t pid)
 {
 	user_regs_struct regs;
@@ -82,6 +78,9 @@ bool Breakpoint::stepOver(pid_t pid)
 	}
 	wait(&wait_status);
 	procmsg("[DEBUG] Post-step EIP = 0x%08x\n", getChildInstructionPointer(pid));
+
+	// Re-enable this breakpoint
+	enable(pid);
 
 	// Check if the child has exited after stepping
 	if (WIFEXITED(wait_status))

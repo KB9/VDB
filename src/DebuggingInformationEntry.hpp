@@ -25,7 +25,7 @@ public:
 	void loadAttributes();
 
 protected:
-	virtual void onAttributeLoaded(Dwarf_Attribute attr, Dwarf_Half attr_code) = 0;
+	virtual void onAttributeLoaded(Dwarf_Attribute attr, Dwarf_Half attr_code, Dwarf_Half form) = 0;
 	
 private:
 	void loadChildren(Dwarf_Debug dbg);

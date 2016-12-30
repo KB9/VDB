@@ -14,11 +14,13 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include <stdint.h>
+
 class Breakpoint
 {
 public:
 	void *addr;
-	unsigned orig_data;
+	uint64_t orig_data;
 
 	Breakpoint(pid_t pid, void *addr);
 
