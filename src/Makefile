@@ -1,4 +1,4 @@
-CPPFILES = Breakpoint.cpp DebuggingInformationEntry.cpp DIECompileUnit.cpp DIESubprogram.cpp CUHeader.cpp DwarfCpp.cpp main.cpp
+CPPFILES = Breakpoint.cpp BreakpointTable.cpp DebuggingInformationEntry.cpp DIECompileUnit.cpp DIESubprogram.cpp CUHeader.cpp DwarfCpp.cpp main.cpp
 CC = gcc
 
 run: all

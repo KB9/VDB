@@ -14,7 +14,17 @@
 #include <cstring>
 
 #include "Breakpoint.hpp"
+#include "BreakpointTable.hpp"
 #include "DwarfCpp.hpp"
+
+// NEXT STEP:
+// Allow ability to set a breakpoint based on a source line number.
+// This will probably involve needing access to the Dwarf_Die of the
+// DebuggingInformationEntry class. Any class which needs this should
+// probably be declared as a friend class, as you don't want to mess
+// with the Dwarf_Die of an already established DIE and there shouldn't
+// be any need for consumer code to use it (however, what if I exclude some
+// functionality that is required? RESEARCH IS REQUIRED HERE!)
 
 // TODO: Move this function to its own dedicated file
 void procmsg(const char* format, ...)
@@ -94,7 +104,9 @@ void run_debugger(pid_t child_pid)
 	procmsg("Entry point. EIP = 0x%08x\n", getChildInstructionPointer(child_pid));
 
 	// DEBUG: Set a breakpoint after child has reached its first instruction
-	Breakpoint breakpoint(child_pid, (void *)0x400566); // For ../../../testchild
+	//Breakpoint breakpoint(child_pid, (void *)0x400566); // For ../../../testchild
+	BreakpointTable breakpoint_table(child_pid);
+	breakpoint_table.addBreakpoint(0x400566);
 	
 	while (true)
 	{	
@@ -122,11 +134,18 @@ void run_debugger(pid_t child_pid)
 			{
 				procmsg("[DEBUG] Breakpoint hit!\n");
 				
-				// TODO: Find the correct breakpoint
 				// TODO: Do stuff at this breakpoint
 
-				// DEBUG: There's only 1 breakpoint currently, step over it
-				if (!breakpoint.stepOver(child_pid)) break;
+				user_regs_struct regs;
+				ptrace(PTRACE_GETREGS, child_pid, 0, &regs);
+				procmsg("[DEBUG] Getting breakpoint at address: 0x%08x\n", regs.rip);
+				uint64_t breakpoint_address = regs.rip - 1;
+				std::unique_ptr<Breakpoint> breakpoint = breakpoint_table.getBreakpoint(breakpoint_address);
+				if (breakpoint)
+				{
+					procmsg("[DEBUG] Stepping over breakpoint at address: 0x%08x\n", breakpoint_address);
+					breakpoint->stepOver(child_pid);
+				}
 				
                 // Continue execution of child process
 				continue;
