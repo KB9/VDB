@@ -25,15 +25,15 @@ std::string getDieTagName(Dwarf_Die die)
 
 DebuggingInformationEntry::DebuggingInformationEntry(Dwarf_Debug dbg, Dwarf_Die die)
 {
+	this->dbg = dbg;
 	this->die = die;
 	
-	loadChildren(dbg);
-	//loadAttributes();
+	loadChildren();
 }
 
-void DebuggingInformationEntry::loadChildren(Dwarf_Debug dbg)
+void DebuggingInformationEntry::loadChildren()
 {
-	procmsg("Loading children of: %s\n", getTagName(dbg).c_str());
+	procmsg("Loading children of: %s\n", getTagName().c_str());
 
 	// Check that this DIE has at least 1 child
 	Dwarf_Die child_die;
@@ -49,7 +49,7 @@ void DebuggingInformationEntry::loadChildren(Dwarf_Debug dbg)
 	// Add the first child if it is a subprogram
 	if (getDieTagName(child_die) == "DW_TAG_subprogram")
 	{
-		children.push_back(std::unique_ptr<DebuggingInformationEntry>(new DIESubprogram(dbg, child_die)));
+		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIESubprogram(dbg, child_die)));
 		children.back()->loadAttributes();
 	}
 
@@ -69,7 +69,7 @@ void DebuggingInformationEntry::loadChildren(Dwarf_Debug dbg)
 		// Add the child if it is a subprogram
 		if (getDieTagName(child_die) == "DW_TAG_subprogram")
 		{
-			children.push_back(std::unique_ptr<DebuggingInformationEntry>(new DIESubprogram(dbg, child_die)));
+			children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIESubprogram(dbg, child_die)));
 			children.back()->loadAttributes();
 		}
 	}
@@ -103,7 +103,12 @@ void DebuggingInformationEntry::loadAttributes()
 	}
 }
 
-std::string DebuggingInformationEntry::getTagName(Dwarf_Debug dbg)
+Dwarf_Die &DebuggingInformationEntry::getInternalDie()
+{
+	return die;
+}
+
+std::string DebuggingInformationEntry::getTagName()
 {
 	const char *tag_name = 0;
 	Dwarf_Half tag;
@@ -120,7 +125,7 @@ std::string DebuggingInformationEntry::getTagName(Dwarf_Debug dbg)
 	return tag_name;
 }
 
-std::vector<std::unique_ptr<DebuggingInformationEntry>> &DebuggingInformationEntry::getChildren()
+std::vector<std::shared_ptr<DebuggingInformationEntry>> &DebuggingInformationEntry::getChildren()
 {
 	return children;
 }

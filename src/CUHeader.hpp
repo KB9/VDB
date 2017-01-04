@@ -13,7 +13,7 @@ class CUHeader
 public:
 	CUHeader(Dwarf_Debug dbg);
 
-	std::unique_ptr<DIECompileUnit> root_die;
+	std::shared_ptr<DIECompileUnit> root_die;
 	
 	Dwarf_Unsigned length;
 	Dwarf_Half version_stamp;

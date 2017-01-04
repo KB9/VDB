@@ -1,12 +1,10 @@
 #pragma once
 
-#include <memory>
 #include <vector>
+#include <memory>
 
-#include <dwarf.h>
 #include "libdwarf.h"
-
-#include <string>
+#include <dwarf.h>
 
 #include "CUHeader.hpp"
 
@@ -14,11 +12,11 @@
 class DebugInfo
 {
 public:
-	DebugInfo();
+	DebugInfo(Dwarf_Debug dbg);
 
-	std::vector<std::unique_ptr<CUHeader>> &getCUHeaders();
+	std::vector<std::shared_ptr<CUHeader>> &getCUHeaders();
 private:
 	void loadCUHeaders(Dwarf_Debug dbg);
 	
-	std::vector<std::unique_ptr<CUHeader>> headers;
+	std::vector<std::shared_ptr<CUHeader>> headers;
 };

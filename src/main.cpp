@@ -15,7 +15,7 @@
 
 #include "Breakpoint.hpp"
 #include "BreakpointTable.hpp"
-#include "DwarfCpp.hpp"
+#include "DwarfDebug.hpp"
 
 // NEXT STEP:
 // Allow ability to set a breakpoint based on a source line number.
@@ -92,10 +92,10 @@ void trace(pid_t child_pid)
 	procmsg("Instructions executed: %d\n", instr_count);
 }
 
-void run_debugger(pid_t child_pid)
+void run_debugger(pid_t child_pid, char *child_name)
 {
-	// DWARF parser testing
-	DebugInfo debug_info;
+	// DwarfDebug testing
+	DwarfDebug dwarf(child_name);
 
 	int wait_status;
 
@@ -103,10 +103,9 @@ void run_debugger(pid_t child_pid)
 	wait(0);
 	procmsg("Entry point. EIP = 0x%08x\n", getChildInstructionPointer(child_pid));
 
-	// DEBUG: Set a breakpoint after child has reached its first instruction
-	//Breakpoint breakpoint(child_pid, (void *)0x400566); // For ../../../testchild
+	// DEBUG: Set a single breakpoint
 	BreakpointTable breakpoint_table(child_pid);
-	breakpoint_table.addBreakpoint(0x400566);
+	breakpoint_table.addBreakpoint(dwarf.line()->getLine(5)->at(0).address);
 	
 	while (true)
 	{	
@@ -136,6 +135,7 @@ void run_debugger(pid_t child_pid)
 				
 				// TODO: Do stuff at this breakpoint
 
+				// DEBUG: Step over the breakpoint
 				user_regs_struct regs;
 				ptrace(PTRACE_GETREGS, child_pid, 0, &regs);
 				procmsg("[DEBUG] Getting breakpoint at address: 0x%08x\n", regs.rip);
@@ -178,7 +178,7 @@ int main(int argc, char **argv)
 	}
 	else if (child_pid > 0)
 	{
-		run_debugger(child_pid);
+		run_debugger(child_pid, argv[1]);
 	}
 	else
 	{
