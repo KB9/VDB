@@ -15,16 +15,8 @@
 
 #include "Breakpoint.hpp"
 #include "BreakpointTable.hpp"
+#include "Backtracer.hpp"
 #include "DwarfDebug.hpp"
-
-// NEXT STEP:
-// Allow ability to set a breakpoint based on a source line number.
-// This will probably involve needing access to the Dwarf_Die of the
-// DebuggingInformationEntry class. Any class which needs this should
-// probably be declared as a friend class, as you don't want to mess
-// with the Dwarf_Die of an already established DIE and there shouldn't
-// be any need for consumer code to use it (however, what if I exclude some
-// functionality that is required? RESEARCH IS REQUIRED HERE!)
 
 // TODO: Move this function to its own dedicated file
 void procmsg(const char* format, ...)
@@ -97,6 +89,9 @@ void run_debugger(pid_t child_pid, char *child_name)
 	// DwarfDebug testing
 	DwarfDebug dwarf(child_name);
 
+	// DEBUG: Backtracer testing
+	Backtracer backtracer(child_pid);
+
 	int wait_status;
 
 	// Wait for child to stop on its first instruction
@@ -143,6 +138,9 @@ void run_debugger(pid_t child_pid, char *child_name)
 				std::unique_ptr<Breakpoint> breakpoint = breakpoint_table.getBreakpoint(breakpoint_address);
 				if (breakpoint)
 				{
+					// DEBUG: Stack trace
+					backtracer.backtrace();
+
 					procmsg("[DEBUG] Stepping over breakpoint at address: 0x%08x\n", breakpoint_address);
 					breakpoint->stepOver(child_pid);
 				}
@@ -162,7 +160,7 @@ void run_debugger(pid_t child_pid, char *child_name)
 }
 
 int main(int argc, char **argv)
-{	
+{
 	pid_t child_pid;
 
 	if (argc < 2)

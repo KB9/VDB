@@ -11,6 +11,7 @@
 
 #include "DebugInfo.hpp"
 #include "DebugLine.hpp"
+#include "DebugAddressRanges.hpp"
 
 class DwarfDebug
 {
@@ -20,6 +21,7 @@ public:
 
 	std::shared_ptr<DebugInfo> info();
 	std::shared_ptr<DebugLine> line();
+	std::shared_ptr<DebugAddressRanges> aranges();
 
 private:
 	FILE *file;
@@ -28,4 +30,5 @@ private:
 
 	std::shared_ptr<DebugInfo> debug_info = nullptr;
 	std::shared_ptr<DebugLine> debug_line = nullptr;
+	std::shared_ptr<DebugAddressRanges> debug_aranges = nullptr;
 };

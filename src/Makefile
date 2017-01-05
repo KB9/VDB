@@ -1,11 +1,17 @@
-CPPFILES = Breakpoint.cpp BreakpointTable.cpp DebuggingInformationEntry.cpp DIECompileUnit.cpp DIESubprogram.cpp CUHeader.cpp DebugInfo.cpp DebugLine.cpp DwarfDebug.cpp main.cpp
-CC = gcc
+CPPFILES = 	Breakpoint.cpp BreakpointTable.cpp DebuggingInformationEntry.cpp \
+			DIECompileUnit.cpp DIESubprogram.cpp CUHeader.cpp DebugInfo.cpp \
+			DebugLine.cpp DebugAddressRanges.cpp DwarfDebug.cpp main.cpp
+
+CC = 		gcc
+
+CFLAGS =	-ldwarf -lelf -lunwind-ptrace -lunwind-generic -D ENV64 -lstdc++ \
+			-std=c++14 -gdwarf-5
 
 run: all
 	./vdb ../../../testchild
 
 all: $(CPPFILES)
-	$(CC) -o vdb $^ -ldwarf -lelf -D ENV64 -gdwarf -lstdc++ -std=c++14
+	$(CC) -o vdb $^ $(CFLAGS)
 
 clean:
 	rm vdb

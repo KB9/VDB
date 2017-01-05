@@ -24,11 +24,10 @@ public:
 	void *addr;
 	uint64_t orig_data;
 
+	void enable(pid_t pid);
+	void disable(pid_t pid);
 	bool stepOver(pid_t pid);
 
 private:
 	Breakpoint(pid_t pid, void *addr);
-
-	void enable(pid_t pid);
-	void disable(pid_t pid);
 };
