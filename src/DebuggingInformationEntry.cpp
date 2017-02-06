@@ -1,6 +1,9 @@
 #include "DebuggingInformationEntry.hpp"
 
 #include "DIESubprogram.hpp"
+#include "DIEFormalParameter.hpp"
+
+#include <cstring>
 
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
@@ -22,6 +25,8 @@ std::string getDieTagName(Dwarf_Die die)
 
 	return tag_name;
 }
+
+
 
 DebuggingInformationEntry::DebuggingInformationEntry(Dwarf_Debug dbg, Dwarf_Die die)
 {
@@ -46,13 +51,7 @@ void DebuggingInformationEntry::loadChildren()
 		return;
 	}
 
-	// Add the first child if it is a subprogram
-	if (getDieTagName(child_die) == "DW_TAG_subprogram")
-	{
-		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIESubprogram(dbg, child_die)));
-		children.back()->loadAttributes();
-	}
-
+	addChildDie(child_die);
 
 	// Go over all children DIEs
 	while (1)
@@ -66,13 +65,27 @@ void DebuggingInformationEntry::loadChildren()
 			break; // Done
 		}
 
-		// Add the child if it is a subprogram
-		if (getDieTagName(child_die) == "DW_TAG_subprogram")
-		{
-			children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIESubprogram(dbg, child_die)));
-			children.back()->loadAttributes();
-		}
+		addChildDie(child_die);
 	}
+}
+
+void DebuggingInformationEntry::addChildDie(Dwarf_Die child_die)
+{
+	std::string tag_name = getDieTagName(child_die);
+
+	if (tag_name == "DW_TAG_subprogram")
+		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIESubprogram(dbg, child_die)));
+
+	else if (tag_name == "DW_TAG_formal_parameter")
+		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIEFormalParameter(dbg, child_die)));
+	
+	else
+	{
+		procmsg("[DWARF] [%s] Ignoring child DIE type: %s\n", getTagName().c_str(), getDieTagName(child_die).c_str());
+		return;
+	}
+
+	children.back()->loadAttributes();
 }
 
 void DebuggingInformationEntry::loadAttributes()

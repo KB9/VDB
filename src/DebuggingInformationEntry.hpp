@@ -31,6 +31,7 @@ protected:
 	
 private:
 	void loadChildren();
+	void addChildDie(Dwarf_Die child_die);
 	
 	// Internal libdwarf type
 	Dwarf_Die die;

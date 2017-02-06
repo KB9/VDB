@@ -1,6 +1,7 @@
 CPPFILES = 	Breakpoint.cpp BreakpointTable.cpp DebuggingInformationEntry.cpp \
-			DIECompileUnit.cpp DIESubprogram.cpp CUHeader.cpp DebugInfo.cpp \
-			DebugLine.cpp DebugAddressRanges.cpp DwarfDebug.cpp main.cpp
+			DIECompileUnit.cpp DIESubprogram.cpp DIEFormalParameter.cpp \
+			CUHeader.cpp DebugInfo.cpp DebugLine.cpp DebugAddressRanges.cpp \
+			DwarfDebug.cpp main.cpp
 
 CC = 		gcc
 
