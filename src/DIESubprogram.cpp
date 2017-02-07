@@ -1,7 +1,23 @@
 #include "DIESubprogram.hpp"
 
+#include <typeinfo>
+
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
+
+std::vector<DIEFormalParameter> DIESubprogram::getFormalParameters()
+{
+   std::vector<DIEFormalParameter> parameters;
+   for (auto &child : getChildren())
+   {
+      if (typeid(*child) == typeid(DIEFormalParameter))
+      {
+         std::shared_ptr<DIEFormalParameter> casted = std::static_pointer_cast<DIEFormalParameter>(child);
+         parameters.push_back(*casted);
+      }
+   }
+   return parameters;
+}
 
 void DIESubprogram::onAttributeLoaded(Dwarf_Attribute attr, Dwarf_Half attr_code, Dwarf_Half form)
 {

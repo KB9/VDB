@@ -9,7 +9,7 @@ CFLAGS =	-ldwarf -lelf -lunwind-ptrace -lunwind-generic -D ENV64 -lstdc++ \
 			-std=c++14 -gdwarf-5
 
 run: all
-	./vdb ../../../testchild
+	./vdb ../../roar #../../../testchild
 
 all: $(CPPFILES)
 	$(CC) -o vdb $^ $(CFLAGS)

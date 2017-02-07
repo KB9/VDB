@@ -16,3 +16,16 @@ CUHeader::CUHeader(Dwarf_Debug dbg)
 	root_die = std::make_unique<DIECompileUnit>(dbg, cu_die);
 	root_die->loadAttributes();
 }
+
+// Recursive method to get all children (below the specified DIE) in the DIE
+// hierarchy and place them in a vector.
+void CUHeader::getChildrenOf(
+	std::shared_ptr<DebuggingInformationEntry> root_die,
+	SharedPtrVector<DebuggingInformationEntry> &children)
+{
+	for (auto &child_die : root_die->getChildren())
+	{
+		children.push_back(child_die);
+		getChildrenOf(child_die, children);
+	}
+}

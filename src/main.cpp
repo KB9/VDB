@@ -100,7 +100,26 @@ void run_debugger(pid_t child_pid, char *child_name)
 
 	// DEBUG: Set a single breakpoint
 	BreakpointTable breakpoint_table(child_pid);
-	breakpoint_table.addBreakpoint(dwarf.line()->getLine(5)->at(0).address);
+	//breakpoint_table.addBreakpoint(dwarf.line()->getLine(5)->at(0).address);
+
+	// DEBUG: Get all children in a compilation unit
+	SharedPtrVector<DIESubprogram> functions =
+		dwarf.info()->getCUHeaders()[0]->getDIEsOfType<DIESubprogram>();
+	for (auto &function : functions)
+	{
+		procmsg("FUNCTION\n");
+		procmsg("Name: %s\n", function->name.c_str());
+		procmsg("LowPC: %x\n", function->lowpc);
+		procmsg("HighPC: %x\n", function->highpc);
+		procmsg("Line number: %d\n", function->line_number);
+
+		for (auto &parameter : function->getFormalParameters())
+		{
+			procmsg("PARAMETER\n");
+			procmsg("Name: %s\n", parameter.name.c_str());
+			procmsg("Line number: %d\n", parameter.line_number);
+		}
+	}
 	
 	while (true)
 	{	
