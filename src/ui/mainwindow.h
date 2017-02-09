@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+#include "vdb.hpp"
+
 namespace Ui {
 class MainWindow;
 }
@@ -20,6 +22,9 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+
+    // DEBUG
+    VDB vdb;
 };
 
 #endif // MAINWINDOW_H

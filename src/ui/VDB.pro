@@ -39,6 +39,6 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui
 
-LIBS += -L"../../bin/core/vdb.so"
+LIBS += -L"../../bin/core" -lvdb
 
 INCLUDEPATH += "../core/"

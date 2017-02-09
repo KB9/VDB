@@ -27,25 +27,9 @@ void MainWindow::actionImportExecutable()
     // Open a file dialog to select the appropriate file
     QString filename = QFileDialog::getOpenFileName(this, tr("Open Image"), "/home/kavan", tr("ELF executables (*)"));
 
-    // Read the text from the text file
-    QFile file(filename);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-    {
-        QMessageBox((QMessageBox::Icon)0, "Error", file.errorString());
-    }
+    // Check if the file is executable
+    if (!QFileInfo(filename).isExecutable()) return;
 
-    // Initialize the text stream
-    QTextStream in(&file);
-
-    // Get the contents of the text file line by line
-    QStringList text_lines;
-    while (!in.atEnd())
-    {
-        text_lines.append(in.readLine());
-    }
-
-    // Close the file
-    file.close();
-
-    ui->fileTabWidget->addTab(new CodeEditor(text_lines), filename);
+    // Create the debugger
+    vdb.run(filename.toStdString().c_str());
 }

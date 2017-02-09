@@ -1,7 +1,7 @@
 CPPFILES = 	Breakpoint.cpp BreakpointTable.cpp DebuggingInformationEntry.cpp \
 			DIECompileUnit.cpp DIESubprogram.cpp DIEFormalParameter.cpp \
 			CUHeader.cpp DebugInfo.cpp DebugLine.cpp DebugAddressRanges.cpp \
-			DwarfDebug.cpp main.cpp
+			DwarfDebug.cpp vdb.cpp
 
 CC = 		gcc
 
@@ -11,7 +11,7 @@ CFLAGS =	-shared -fPIC -Wl,-whole-archive libdwarf.a -Wl,-no-whole-archive \
 
 
 all: $(CPPFILES)
-	$(CC) -o vdb.so $^ $(CFLAGS)
+	$(CC) -o libvdb.so $^ $(CFLAGS)
 
 clean:
-	rm vdb.so
+	rm libvdb.so
