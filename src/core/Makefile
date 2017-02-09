@@ -5,14 +5,13 @@ CPPFILES = 	Breakpoint.cpp BreakpointTable.cpp DebuggingInformationEntry.cpp \
 
 CC = 		gcc
 
-CFLAGS =	-ldwarf -lelf -lunwind-ptrace -lunwind-generic -D ENV64 -lstdc++ \
+CFLAGS =	-shared -fPIC -Wl,-whole-archive libdwarf.a -Wl,-no-whole-archive \
+            -lelf -lunwind-ptrace -lunwind-generic -D ENV64 -lstdc++ \
 			-std=c++14 -gdwarf-5
 
-run: all
-	./vdb ../../roar #../../../testchild
 
 all: $(CPPFILES)
-	$(CC) -o vdb $^ $(CFLAGS)
+	$(CC) -o vdb.so $^ $(CFLAGS)
 
 clean:
-	rm vdb
+	rm vdb.so

@@ -38,3 +38,7 @@ HEADERS  += mainwindow.h \
     filetree.h
 
 FORMS    += mainwindow.ui
+
+LIBS += -L"../../bin/core/vdb.so"
+
+INCLUDEPATH += "../core/"
