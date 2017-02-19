@@ -28,7 +28,8 @@ SOURCES += main.cpp\
     codeeditor.cpp \
     highlighter.cpp \
     filetabs.cpp \
-    filetree.cpp
+    filetree.cpp \
+    linenumberarea.cpp
 
 HEADERS  += mainwindow.h \
     linenumberarea.h \

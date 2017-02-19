@@ -48,28 +48,10 @@ CodeEditor::CodeEditor(QStringList lines, QWidget *parent) : CodeEditor(parent)
     moveCursor(QTextCursor::Start);
 }
 
-// Calculates the width of the LineNumberArea widget
-int CodeEditor::lineNumberAreaWidth()
-{
-    // Calculates the number of digits in the last line of the editor
-    int digits = 1;
-    int max = qMax(1, blockCount());
-    while (max >= 10)
-    {
-        max /= 10;
-        ++digits;
-    }
-
-    // Multiplies the number of digits by the width of the font characters
-    int space = 3 + fontMetrics().width(QLatin1Char('9')) * digits;
-
-    return space;
-}
-
 // Updates the width of the line number area
 void CodeEditor::updateLineNumberAreaWidth(int /*new_block_count*/)
 {
-    setViewportMargins(lineNumberAreaWidth(), 0, 0, 0);
+    setViewportMargins(line_number_area->getWidth(), 0, 0, 0);
 }
 
 // Invoked when the editor's viewport is scrolled.
@@ -92,7 +74,7 @@ void CodeEditor::resizeEvent(QResizeEvent *e)
 
     // Resize the line number area on editor resize
     QRect cr = contentsRect();
-    line_number_area->setGeometry(QRect(cr.left(), cr.top(), lineNumberAreaWidth(), cr.height()));
+    line_number_area->setGeometry(QRect(cr.left(), cr.top(), line_number_area->getWidth(), cr.height()));
 }
 
 void CodeEditor::onCursorPositionChanged()
@@ -140,6 +122,12 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
         {
             QString number = QString::number(block_number + 1);
             painter.setPen(Qt::black);
+
+            // Color the number's background red if it has an assigned breakpoint
+            if (line_number_area->getBreakpoints().contains(block_number + 1))
+                painter.fillRect(QRectF(0, top, line_number_area->width(), fontMetrics().height()), Qt::red);
+
+            // Draw the line number
             painter.drawText(0, top, line_number_area->width(), fontMetrics().height(), Qt::AlignRight, number);
         }
 
@@ -148,6 +136,24 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
         bottom = top + (int) blockBoundingRect(block).height();
         ++block_number;
     }
+}
+
+// Returns the line number from a given y-position
+int CodeEditor::getLineNumberFromY(int y)
+{
+    QTextBlock block = firstVisibleBlock();
+    int total_height = 0;
+    while (block.isValid() && block.isVisible())
+    {
+        QRectF rect = block.layout()->boundingRect();
+        if (y >= total_height && y < (total_height + rect.height()))
+        {
+            return block.blockNumber() + 1;
+        }
+        total_height += rect.height();
+        block = block.next();
+    }
+    return -1;
 }
 
 // Counts and displays matching parentheses

@@ -5,6 +5,9 @@
 #include <QObject>
 
 #include "highlighter.h"
+#include "linenumberarea.h"
+
+class LineNumberArea;
 
 class CodeEditor : public QPlainTextEdit
 {
@@ -17,8 +20,8 @@ public:
     // Called from LineNumberArea whenever it receives a paint event
     void lineNumberAreaPaintEvent(QPaintEvent *event);
 
-    // Calculates the width of the LineNumberArea widget
-    int lineNumberAreaWidth();
+    // Returns the line number from a given y-position
+    int getLineNumberFromY(int y);
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
@@ -44,7 +47,7 @@ private slots:
     void matchParentheses(QList<QTextEdit::ExtraSelection> &selections);
 
 private:
-    QWidget *line_number_area;
+    LineNumberArea *line_number_area;
     Highlighter *highlighter;
 
     bool matchLeftParenthesis(QTextBlock current_block, int index, int num_right_parentheses,

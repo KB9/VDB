@@ -8,7 +8,6 @@
 
 #include "codeeditor.h"
 
-#include <iostream>
 #include <memory>
 
 #include "CUHeader.hpp"
