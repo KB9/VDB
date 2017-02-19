@@ -80,7 +80,8 @@ bool VDB::runTarget(const char *executable_name)
 
 bool VDB::runDebugger(pid_t child_pid, const char *child_name)
 {
-	DwarfDebug dwarf(child_name);
+	//DwarfDebug dwarf(child_name);
+	dwarf = std::unique_ptr<DwarfDebug>(new DwarfDebug(child_name));
 
 	return true;
 }

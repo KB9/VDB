@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QTreeWidget>
 
 #include "vdb.hpp"
 
@@ -19,6 +20,8 @@ public:
 
 private slots:
     void actionImportExecutable();
+
+    void onFileSelected(QTreeWidgetItem *item, int column);
 
 private:
     Ui::MainWindow *ui;

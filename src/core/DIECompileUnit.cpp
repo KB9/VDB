@@ -16,6 +16,15 @@ void DIECompileUnit::onAttributeLoaded(Dwarf_Attribute attr, Dwarf_Half attr_cod
 		break;
 	}
 
+	case DW_AT_comp_dir:
+	{
+		char *c_comp_dir = 0;
+		dwarf_formstring(attr, &c_comp_dir, 0);
+		comp_dir = c_comp_dir;
+		procmsg("[DWARF] [DIECompileUnit] Save attribute: DW_AT_comp_dir (%s)\n", c_comp_dir);
+		break;
+	}
+
 	case DW_AT_low_pc:
 	{
 		Dwarf_Addr addr;
@@ -54,4 +63,14 @@ void DIECompileUnit::onAttributeLoaded(Dwarf_Attribute attr, Dwarf_Half attr_cod
 	default:
 		procmsg("[DWARF] [DIECompileUnit] Ignoring attribute...\n");
 	}
+}
+
+std::string DIECompileUnit::getName()
+{
+	return name;
+}
+
+std::string DIECompileUnit::getCompDir()
+{
+	return comp_dir;
 }

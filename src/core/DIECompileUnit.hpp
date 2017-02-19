@@ -17,11 +17,17 @@ public:
 
 	}
 
+	std::string getName();
+	std::string getCompDir();
+
 private:
 	virtual void onAttributeLoaded(Dwarf_Attribute attr, Dwarf_Half attr_code, Dwarf_Half form) override;
 
 	// The name (filename) of the compilation unit
 	std::string name;
+
+	// The directory of the compilation unit file
+	std::string comp_dir;
 
 	// Comilation unit entry address
 	unsigned int lowpc;
