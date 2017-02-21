@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "DwarfDebug.hpp"
+#include "BreakpointTable.hpp"
 
 class VDB
 {
@@ -12,16 +13,20 @@ public:
 	VDB();
 	~VDB();
 
-	bool run(const char *executable_name);
+	bool init(const char *executable_name);
+	bool run();
 
-	std::shared_ptr<DwarfDebug> getDwarfDebugData()
-	{
-		return dwarf;
-	}
+	std::shared_ptr<DwarfDebug> getDwarfDebugData();
+
+	std::shared_ptr<BreakpointTable> breakpoint_table = nullptr;
 
 private:
-	bool runTarget(const char *executable_name);
-	bool runDebugger(pid_t child_pid, const char *child_name);
+
+	bool runTarget();
+	bool runDebugger();
+
+	pid_t target_pid;
+	char *target_name = nullptr;
 
 	std::shared_ptr<DwarfDebug> dwarf = nullptr;
 };

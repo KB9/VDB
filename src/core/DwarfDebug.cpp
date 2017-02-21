@@ -7,7 +7,7 @@ void procmsg(const char* format, ...);
 
 static void simple_error_handler(Dwarf_Error error, Dwarf_Ptr errarg)
 {
-	printf("libdwarf error: %d %s0", dwarf_errno(error), dwarf_errmsg(error));
+	printf("libdwarf error: %llu %s0", dwarf_errno(error), dwarf_errmsg(error));
 }
 
 DwarfDebug::DwarfDebug(std::string filename)

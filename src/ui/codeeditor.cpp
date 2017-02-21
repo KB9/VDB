@@ -3,14 +3,19 @@
 #include "codeeditor.h"
 #include "linenumberarea.h"
 
-CodeEditor::CodeEditor(QWidget *parent) : QPlainTextEdit(parent)
+CodeEditor::CodeEditor(QString filepath, std::shared_ptr<VDB> vdb, QWidget *parent) : QPlainTextEdit(parent)
 {
+    this->filepath = filepath;
+    this->vdb = vdb;
+
     line_number_area = new LineNumberArea(this);
 
     // Line number area signals & slots
     connect(this, SIGNAL(blockCountChanged(int)), this, SLOT(updateLineNumberAreaWidth(int)));
     connect(this, SIGNAL(updateRequest(QRect, int)), this, SLOT(updateLineNumberArea(QRect,int)));
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(onCursorPositionChanged()));
+
+    connect(line_number_area, SIGNAL(lineNumberPressed(unsigned int)), this, SLOT(toggleBreakpoint(unsigned int)));
 
     // Initialize the line number area width and highlight
     updateLineNumberAreaWidth(0);
@@ -35,7 +40,7 @@ CodeEditor::CodeEditor(QWidget *parent) : QPlainTextEdit(parent)
     highlighter = new Highlighter(this->document());
 }
 
-CodeEditor::CodeEditor(QStringList lines, QWidget *parent) : CodeEditor(parent)
+CodeEditor::CodeEditor(QString filepath, QStringList lines, std::shared_ptr<VDB> vdb, QWidget *parent) : CodeEditor(filepath, vdb, parent)
 {
     for (QString line : lines)
     {
@@ -124,7 +129,7 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
             painter.setPen(Qt::black);
 
             // Color the number's background red if it has an assigned breakpoint
-            if (line_number_area->getBreakpoints().contains(block_number + 1))
+            if (breakpoints.contains(block_number + 1))
                 painter.fillRect(QRectF(0, top, line_number_area->width(), fontMetrics().height()), Qt::red);
 
             // Draw the line number
@@ -139,7 +144,7 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
 }
 
 // Returns the line number from a given y-position
-int CodeEditor::getLineNumberFromY(int y)
+unsigned int CodeEditor::getLineNumberFromY(int y)
 {
     QTextBlock block = firstVisibleBlock();
     int total_height = 0;
@@ -154,6 +159,24 @@ int CodeEditor::getLineNumberFromY(int y)
         block = block.next();
     }
     return -1;
+}
+
+void CodeEditor::toggleBreakpoint(unsigned int line_number)
+{
+    if (breakpoints.contains(line_number))
+    {
+        bool removed = vdb->breakpoint_table->removeBreakpoint(filepath.toStdString().c_str(), line_number);
+        if (removed)
+        {
+            int index = breakpoints.indexOf(line_number);
+            breakpoints.remove(index);
+        }
+    }
+    else
+    {
+        bool added = vdb->breakpoint_table->addBreakpoint(filepath.toStdString().c_str(), line_number);
+        if (added) breakpoints.push_back(line_number);
+    }
 }
 
 // Counts and displays matching parentheses

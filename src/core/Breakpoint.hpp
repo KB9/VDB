@@ -29,5 +29,5 @@ public:
 	bool stepOver(pid_t pid);
 
 private:
-	Breakpoint(pid_t pid, void *addr);
+	Breakpoint(void *addr);
 };

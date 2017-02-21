@@ -2,6 +2,7 @@
 #define LINENUMBERAREA_H
 
 #include <QVector>
+#include <QWidget>
 
 #include "codeeditor.h"
 
@@ -9,6 +10,8 @@ class CodeEditor;
 
 class LineNumberArea : public QWidget
 {
+    Q_OBJECT
+
 public:
     LineNumberArea(CodeEditor *editor);
 
@@ -16,17 +19,16 @@ public:
 
     int getWidth() const;
 
-    QVector<int> &getBreakpoints();
-
 protected:
     void paintEvent(QPaintEvent *event) override;
 
     void mousePressEvent(QMouseEvent *event) override;
 
+signals:
+    void lineNumberPressed(unsigned int);
+
 private:
     CodeEditor *code_editor;
-
-    QVector<int> breakpoint_line_numbers;
 };
 
 #endif // LINENUMBERAREA_H

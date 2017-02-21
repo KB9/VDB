@@ -7,6 +7,9 @@
 #include "highlighter.h"
 #include "linenumberarea.h"
 
+#include <memory>
+#include "vdb.hpp"
+
 class LineNumberArea;
 
 class CodeEditor : public QPlainTextEdit
@@ -14,14 +17,14 @@ class CodeEditor : public QPlainTextEdit
     Q_OBJECT
 
 public:
-    CodeEditor(QWidget *parent = 0);
-    CodeEditor(QStringList lines, QWidget *parent = 0);
+    CodeEditor(QString filepath, std::shared_ptr<VDB> vdb, QWidget *parent = 0);
+    CodeEditor(QString filepath, QStringList lines, std::shared_ptr<VDB> vdb, QWidget *parent = 0);
 
     // Called from LineNumberArea whenever it receives a paint event
     void lineNumberAreaPaintEvent(QPaintEvent *event);
 
     // Returns the line number from a given y-position
-    int getLineNumberFromY(int y);
+    unsigned int getLineNumberFromY(int y);
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
@@ -46,8 +49,15 @@ private slots:
     // Counts and displays matching parentheses
     void matchParentheses(QList<QTextEdit::ExtraSelection> &selections);
 
+    void toggleBreakpoint(unsigned int line_number);
+
 private:
+    QString filepath;
+    std::shared_ptr<VDB> vdb = nullptr;
+
     LineNumberArea *line_number_area;
+    QVector<unsigned int> breakpoints;
+
     Highlighter *highlighter;
 
     bool matchLeftParenthesis(QTextBlock current_block, int index, int num_right_parentheses,

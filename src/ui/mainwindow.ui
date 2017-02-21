@@ -29,6 +29,11 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
+      <column>
+       <property name="text">
+        <string notr="true">1</string>
+       </property>
+      </column>
      </widget>
     </item>
     <item>
@@ -87,6 +92,7 @@
     <property name="title">
      <string>Run</string>
     </property>
+    <addaction name="actionRun_target"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -96,6 +102,11 @@
   <action name="actionImport_executable">
    <property name="text">
     <string>Import executable...</string>
+   </property>
+  </action>
+  <action name="actionRun_target">
+   <property name="text">
+    <string>Run target</string>
    </property>
   </action>
  </widget>
@@ -131,8 +142,25 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionRun_target</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>actionRunTarget()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>actionImportExecutable()</slot>
+  <slot>actionRunTarget()</slot>
  </slots>
 </ui>

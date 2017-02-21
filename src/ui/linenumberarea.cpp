@@ -28,11 +28,6 @@ int LineNumberArea::getWidth() const
     return space;
 }
 
-QVector<int> &LineNumberArea::getBreakpoints()
-{
-    return breakpoint_line_numbers;
-}
-
 void LineNumberArea::paintEvent(QPaintEvent *event)
 {
     code_editor->lineNumberAreaPaintEvent(event);
@@ -40,18 +35,7 @@ void LineNumberArea::paintEvent(QPaintEvent *event)
 
 void LineNumberArea::mousePressEvent(QMouseEvent *event)
 {
-    int line_number = code_editor->getLineNumberFromY(event->y());
-    if (line_number < 0) return;
-
-    if (breakpoint_line_numbers.contains(line_number))
-    {
-        int index = breakpoint_line_numbers.indexOf(line_number);
-        breakpoint_line_numbers.remove(index);
-    }
-    else
-    {
-        breakpoint_line_numbers.push_back(line_number);
-    }
-
+    unsigned int line_number = code_editor->getLineNumberFromY(event->y());
+    emit lineNumberPressed(line_number);
     update();
 }

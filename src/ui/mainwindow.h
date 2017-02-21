@@ -20,6 +20,7 @@ public:
 
 private slots:
     void actionImportExecutable();
+    void actionRunTarget();
 
     void onFileSelected(QTreeWidgetItem *item, int column);
 

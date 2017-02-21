@@ -30,13 +30,15 @@ MainWindow::~MainWindow()
 void MainWindow::actionImportExecutable()
 {
     // Open a file dialog to select the appropriate file
-    QString filename = QFileDialog::getOpenFileName(this, tr("Open Image"), "/home/kavan", tr("ELF executables (*)"));
+    QFileDialog dialog;
+    dialog.setFilter(QDir::Executable);
+    QString filename = dialog.getOpenFileName(this, tr("Import executable"), QDir::homePath());
 
     // Check if the file is executable
     if (!QFileInfo(filename).isExecutable()) return;
 
     // Create the debugger
-    vdb.run(filename.toStdString().c_str());
+    vdb.init(filename.toStdString().c_str());
 
     // Clear the files window
     ui->fileTreeWidget->clear();
@@ -61,6 +63,11 @@ void MainWindow::actionImportExecutable()
             dir_item->addChild(file_item);
         }
     }
+}
+
+void MainWindow::actionRunTarget()
+{
+    vdb.run();
 }
 
 void MainWindow::onFileSelected(QTreeWidgetItem *item, int column)
@@ -94,5 +101,5 @@ void MainWindow::onFileSelected(QTreeWidgetItem *item, int column)
     }
 
     // Add a new code editor tab
-    ui->fileTabWidget->addTab(new CodeEditor(lines), filename);
+    ui->fileTabWidget->addTab(new CodeEditor(absolute_path, lines, std::shared_ptr<VDB>(&vdb)), filename);
 }

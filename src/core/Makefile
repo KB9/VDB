@@ -7,7 +7,7 @@ CC = 		gcc
 
 CFLAGS =	-shared -fPIC -Wl,-whole-archive libdwarf.a -Wl,-no-whole-archive \
             -lelf -lunwind-ptrace -lunwind-generic -D ENV64 -lstdc++ \
-			-std=c++14 -gdwarf-5
+			-std=c++14 -gdwarf-5 -Wall -Wpedantic
 
 
 all: $(CPPFILES)

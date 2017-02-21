@@ -4,10 +4,9 @@
 void procmsg(const char *format, ...);
 unsigned getChildInstructionPointer(pid_t child_pid);
 
-Breakpoint::Breakpoint(pid_t pid, void *addr)
+Breakpoint::Breakpoint(void *addr)
 {
 	this->addr = addr;
-	enable(pid);
 
 	procmsg("Breakpoint created: 0x%08x\n", addr);
 }
