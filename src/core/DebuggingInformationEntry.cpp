@@ -2,6 +2,7 @@
 
 #include "DIESubprogram.hpp"
 #include "DIEFormalParameter.hpp"
+#include "DIEVariable.hpp"
 
 #include <cstring>
 
@@ -79,6 +80,9 @@ void DebuggingInformationEntry::addChildDie(const Dwarf_Die &child_die)
 
 	else if (tag_name == "DW_TAG_formal_parameter")
 		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIEFormalParameter(dbg, child_die)));
+
+	else if (tag_name == "DW_TAG_variable")
+		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIEVariable(dbg, child_die)));
 	
 	else
 	{
