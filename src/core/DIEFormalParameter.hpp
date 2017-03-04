@@ -17,12 +17,14 @@ public:
 	// The line number this formal parameter is defined on
 	unsigned int line_number;
 
-	DIEFormalParameter(Dwarf_Debug dbg, Dwarf_Die die) :
+	DIEFormalParameter(const Dwarf_Debug &dbg, const Dwarf_Die &die) :
 		DebuggingInformationEntry(dbg, die)
 	{
 
 	}
 
 private:
-	virtual void onAttributeLoaded(Dwarf_Attribute attr, Dwarf_Half attr_code, Dwarf_Half form) override;
+	virtual void onAttributeLoaded(const Dwarf_Attribute &attr,
+	                               const Dwarf_Half &attr_code,
+	                               const Dwarf_Half &form) override;
 };

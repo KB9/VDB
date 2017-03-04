@@ -26,7 +26,7 @@ private:
 	bool runDebugger();
 
 	pid_t target_pid;
-	char *target_name = nullptr;
+	char *target_name = NULL;
 
 	std::shared_ptr<DwarfDebug> dwarf = nullptr;
 };

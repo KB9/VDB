@@ -12,6 +12,12 @@
 // Structure containing information about a single source line
 struct Line
 {
+	Line(uint64_t number, uint64_t address, bool is_begin_statement, char *source) :
+		number(number),
+		address(address),
+		is_begin_statement(is_begin_statement),
+		source(source) {}
+
 	const uint64_t number;
 	const uint64_t address;
 	const bool is_begin_statement;
@@ -24,7 +30,7 @@ struct Line
 class DebugLine
 {
 public:
-	DebugLine(DIECompileUnit compile_unit_die);
+	DebugLine(DIECompileUnit &compile_unit_die);
 
 	std::unique_ptr<std::vector<Line>> getLine(uint64_t line_number);
 	std::vector<Line> getAllLines();
@@ -33,5 +39,5 @@ private:
 	std::unordered_map<uint64_t, std::vector<Line>> line_map;
 	std::vector<Line> line_vector;
 
-	void insertLine(Line line);
+	void insertLine(const Line &line);
 };

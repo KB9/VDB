@@ -39,14 +39,14 @@ VDB::VDB()
 
 VDB::~VDB()
 {
-	if (target_name) delete target_name;
-	target_name = nullptr;
+	if (target_name != NULL) delete target_name;
+	target_name = NULL;
 }
 
 bool VDB::init(const char *executable_name)
 {
 	// Assign the new target executable name
-	if (target_name) delete target_name;
+	if (target_name != NULL) delete target_name;
 	target_name = new char[strlen(executable_name) + 1];
 	strcpy(target_name, executable_name);
 
@@ -54,7 +54,7 @@ bool VDB::init(const char *executable_name)
 	dwarf = std::make_shared<DwarfDebug>(target_name);
 
 	// Initialize the breakpoint table
-	breakpoint_table = std::make_shared<BreakpointTable>(*dwarf);
+	breakpoint_table = std::make_shared<BreakpointTable>(dwarf);
 
 	return true;
 }

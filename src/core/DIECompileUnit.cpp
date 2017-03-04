@@ -3,7 +3,9 @@
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
-void DIECompileUnit::onAttributeLoaded(Dwarf_Attribute attr, Dwarf_Half attr_code, Dwarf_Half form)
+void DIECompileUnit::onAttributeLoaded(const Dwarf_Attribute &attr,
+                                       const Dwarf_Half &attr_code,
+                                       const Dwarf_Half &form)
 {
 	switch (attr_code)
 	{

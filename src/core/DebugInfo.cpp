@@ -3,15 +3,14 @@
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
-DebugInfo::DebugInfo(Dwarf_Debug dbg)
-{	
+DebugInfo::DebugInfo(const Dwarf_Debug &dbg) : dbg(dbg)
+{
 	// Load the compilation unit headers
-	loadCUHeaders(dbg);
+	loadCUHeaders();
 }
 
-void DebugInfo::loadCUHeaders(Dwarf_Debug dbg)
+void DebugInfo::loadCUHeaders()
 {
-	Dwarf_Error err;
 	int result = DW_DLV_OK;
 	while (result == DW_DLV_OK)
 	{

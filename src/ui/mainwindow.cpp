@@ -8,8 +8,6 @@
 
 #include "codeeditor.h"
 
-#include <memory>
-
 #include "CUHeader.hpp"
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -20,6 +18,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->fileTreeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)),
             this, SLOT(onFileSelected(QTreeWidgetItem*,int)));
+
+    vdb = std::make_shared<VDB>();
 }
 
 MainWindow::~MainWindow()
@@ -38,13 +38,13 @@ void MainWindow::actionImportExecutable()
     if (!QFileInfo(filename).isExecutable()) return;
 
     // Create the debugger
-    vdb.init(filename.toStdString().c_str());
+    vdb->init(filename.toStdString().c_str());
 
     // Clear the files window
     ui->fileTreeWidget->clear();
 
     // Find the associated source files
-    std::shared_ptr<DwarfDebug> dwarf = vdb.getDwarfDebugData();
+    std::shared_ptr<DwarfDebug> dwarf = vdb->getDwarfDebugData();
     for (std::shared_ptr<CUHeader> header : dwarf->info()->getCUHeaders())
     {
         QString filename = QString(header->root_die->getName().c_str());
@@ -67,7 +67,7 @@ void MainWindow::actionImportExecutable()
 
 void MainWindow::actionRunTarget()
 {
-    vdb.run();
+    vdb->run();
 }
 
 void MainWindow::onFileSelected(QTreeWidgetItem *item, int column)
@@ -101,5 +101,5 @@ void MainWindow::onFileSelected(QTreeWidgetItem *item, int column)
     }
 
     // Add a new code editor tab
-    ui->fileTabWidget->addTab(new CodeEditor(absolute_path, lines, std::shared_ptr<VDB>(&vdb)), filename);
+    ui->fileTabWidget->addTab(new CodeEditor(absolute_path, lines, vdb), filename);
 }

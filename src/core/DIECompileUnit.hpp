@@ -11,7 +11,7 @@
 class DIECompileUnit : public DebuggingInformationEntry
 {
 public:
-	DIECompileUnit(Dwarf_Debug dbg, Dwarf_Die die) :
+	DIECompileUnit(const Dwarf_Debug &dbg, const Dwarf_Die &die) :
 		DebuggingInformationEntry(dbg, die)
 	{
 
@@ -21,7 +21,9 @@ public:
 	std::string getCompDir();
 
 private:
-	virtual void onAttributeLoaded(Dwarf_Attribute attr, Dwarf_Half attr_code, Dwarf_Half form) override;
+	virtual void onAttributeLoaded(const Dwarf_Attribute &attr,
+	                               const Dwarf_Half &attr_code,
+	                               const Dwarf_Half &form) override;
 
 	// The name (filename) of the compilation unit
 	std::string name;

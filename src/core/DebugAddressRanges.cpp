@@ -3,7 +3,7 @@
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
-DebugAddressRanges::DebugAddressRanges(Dwarf_Debug dbg)
+DebugAddressRanges::DebugAddressRanges(const Dwarf_Debug &dbg)
 {
 	Dwarf_Arange *aranges;
 	Dwarf_Signed arange_count;
@@ -43,11 +43,7 @@ DebugAddressRanges::DebugAddressRanges(Dwarf_Debug dbg)
 		}
 
 		// Create the address range and push it to the vector
-		AddressRange range = {
-			.start = start,
-			.end = start + length,
-			.length = length
-		};
+		AddressRange range(start, start + length, length);
 		address_ranges.push_back(range);
 
 		// DEBUG

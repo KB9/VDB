@@ -8,6 +8,11 @@
 
 struct AddressRange
 {
+	AddressRange(uint64_t start, uint64_t end, uint64_t length) :
+		start(start),
+		end(end),
+		length(length) {}
+
 	const uint64_t start;
 	const uint64_t end;
 	const uint64_t length;
@@ -19,7 +24,7 @@ struct AddressRange
 class DebugAddressRanges
 {
 public:
-	DebugAddressRanges(Dwarf_Debug dbg);
+	DebugAddressRanges(const Dwarf_Debug &dbg);
 
 	std::vector<AddressRange> getAddressRanges();
 

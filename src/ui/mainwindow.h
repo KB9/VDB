@@ -6,6 +6,8 @@
 
 #include "vdb.hpp"
 
+#include <memory>
+
 namespace Ui {
 class MainWindow;
 }
@@ -27,7 +29,7 @@ private slots:
 private:
     Ui::MainWindow *ui;
 
-    VDB vdb;
+    std::shared_ptr<VDB> vdb = nullptr;
 };
 
 #endif // MAINWINDOW_H

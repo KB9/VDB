@@ -19,7 +19,9 @@ std::vector<DIEFormalParameter> DIESubprogram::getFormalParameters()
    return parameters;
 }
 
-void DIESubprogram::onAttributeLoaded(Dwarf_Attribute attr, Dwarf_Half attr_code, Dwarf_Half form)
+void DIESubprogram::onAttributeLoaded(const Dwarf_Attribute &attr,
+                                      const Dwarf_Half &attr_code,
+                                      const Dwarf_Half &form)
 {
 	switch (attr_code)
 	{

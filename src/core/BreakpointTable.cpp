@@ -4,7 +4,7 @@
 
 #include <cstring>
 
-BreakpointTable::BreakpointTable(DwarfDebug &dwarf) :
+BreakpointTable::BreakpointTable(std::shared_ptr<DwarfDebug> dwarf) :
 	dwarf(dwarf)
 {
 	
@@ -17,12 +17,10 @@ void BreakpointTable::addBreakpoint(uint64_t address)
 	breakpoints_by_address.insert(entry);
 }
 
-
-
 bool BreakpointTable::addBreakpoint(const char *source_file,
                                     unsigned int line_number)
 {
-	for (Line line : dwarf.line()->getAllLines())
+	for (Line line : dwarf->line()->getAllLines())
 	{
 		if (strcmp(line.source, source_file) == 0 &&
 		    line.number == line_number &&
@@ -38,7 +36,7 @@ bool BreakpointTable::addBreakpoint(const char *source_file,
 bool BreakpointTable::removeBreakpoint(const char *source_file,
                                        unsigned int line_number)
 {
-	for (Line line : dwarf.line()->getAllLines())
+	for (Line line : dwarf->line()->getAllLines())
 	{
 		if (strcmp(line.source, source_file) == 0 &&
 		    line.number == line_number &&

@@ -12,11 +12,13 @@
 class DebugInfo
 {
 public:
-	DebugInfo(Dwarf_Debug dbg);
+	DebugInfo(const Dwarf_Debug &dbg);
 
 	std::vector<std::shared_ptr<CUHeader>> &getCUHeaders();
 private:
-	void loadCUHeaders(Dwarf_Debug dbg);
+	void loadCUHeaders();
+
+	Dwarf_Debug dbg;
 	
 	std::vector<std::shared_ptr<CUHeader>> headers;
 };

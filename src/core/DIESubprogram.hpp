@@ -27,7 +27,7 @@ public:
 	// The line number the function is implemented at
 	unsigned int line_number;
 
-	DIESubprogram(Dwarf_Debug dbg, Dwarf_Die die) :
+	DIESubprogram(const Dwarf_Debug &dbg, const Dwarf_Die &die) :
 		DebuggingInformationEntry(dbg, die)
 	{
 	    
@@ -37,5 +37,7 @@ public:
 	std::vector<DIEFormalParameter> getFormalParameters();
 
 private:
-	virtual void onAttributeLoaded(Dwarf_Attribute attr, Dwarf_Half attr_code, Dwarf_Half form) override;
+	virtual void onAttributeLoaded(const Dwarf_Attribute &attr,
+	                               const Dwarf_Half &attr_code,
+	                               const Dwarf_Half &form) override;
 };

@@ -9,7 +9,7 @@
 void procmsg(const char* format, ...);
 
 // TODO: Should probably be a helper method...
-std::string getDieTagName(Dwarf_Die die)
+std::string getDieTagName(const Dwarf_Die &die)
 {
 	const char *tag_name = 0;
 	Dwarf_Half tag;
@@ -28,7 +28,8 @@ std::string getDieTagName(Dwarf_Die die)
 
 
 
-DebuggingInformationEntry::DebuggingInformationEntry(Dwarf_Debug dbg, Dwarf_Die die)
+DebuggingInformationEntry::DebuggingInformationEntry(const Dwarf_Debug &dbg,
+                                                     const Dwarf_Die &die)
 {
 	this->dbg = dbg;
 	this->die = die;
@@ -69,7 +70,7 @@ void DebuggingInformationEntry::loadChildren()
 	}
 }
 
-void DebuggingInformationEntry::addChildDie(Dwarf_Die child_die)
+void DebuggingInformationEntry::addChildDie(const Dwarf_Die &child_die)
 {
 	std::string tag_name = getDieTagName(child_die);
 

@@ -3,7 +3,7 @@
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
-CUHeader::CUHeader(Dwarf_Debug dbg)
+CUHeader::CUHeader(const Dwarf_Debug &dbg)
 {
 	Dwarf_Die no_die = 0, cu_die;
 	Dwarf_Error err;

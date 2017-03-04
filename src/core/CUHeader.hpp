@@ -20,7 +20,7 @@ using SharedPtrVector = std::vector<std::shared_ptr<T>>;
 class CUHeader
 {
 public:
-	CUHeader(Dwarf_Debug dbg);
+	CUHeader(const Dwarf_Debug &dbg);
 
 	template <typename T>
 	SharedPtrVector<T> getDIEsOfType()

@@ -13,7 +13,7 @@
 class BreakpointTable
 {
 public:
-	BreakpointTable(DwarfDebug &dwarf);
+	BreakpointTable(std::shared_ptr<DwarfDebug> dwarf);
 
 	void addBreakpoint(uint64_t address);
 	void removeBreakpoint(uint64_t address);
@@ -27,7 +27,7 @@ public:
 
 private:
 	pid_t target_pid;
-	DwarfDebug dwarf;
+	std::shared_ptr<DwarfDebug> dwarf = nullptr;
 
 	std::unordered_map<uint64_t, Breakpoint> breakpoints_by_address;
 };

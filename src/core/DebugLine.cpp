@@ -3,7 +3,7 @@
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
-DebugLine::DebugLine(DIECompileUnit compile_unit_die)
+DebugLine::DebugLine(DIECompileUnit &compile_unit_die)
 {
 	/*
 	TODO:
@@ -54,12 +54,7 @@ DebugLine::DebugLine(DIECompileUnit compile_unit_die)
 				procmsg("[DWARF_ERROR] Error in dwarf_linesrc!\n");
 
 			// Store the line information and insert it into the lines map
-			Line line = {
-				.number = line_number,
-				.address = line_addr,
-				.is_begin_statement = is_begin_statement,
-				.source = line_src
-			};
+			Line line(line_number, line_addr, is_begin_statement, line_src);
 			insertLine(line);
 
 			procmsg("[DWARF] [%s] Line %d saved! (0x%08x)\n", line_src, line_number, line_addr);
@@ -71,7 +66,7 @@ DebugLine::DebugLine(DIECompileUnit compile_unit_die)
 	}
 }
 
-void DebugLine::insertLine(Line line)
+void DebugLine::insertLine(const Line &line)
 {
 	// Push all lines to the line vector
 	line_vector.push_back(line);
