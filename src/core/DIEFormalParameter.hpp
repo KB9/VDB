@@ -17,8 +17,10 @@ public:
 	// The line number this formal parameter is defined on
 	unsigned int line_number;
 
-	DIEFormalParameter(const Dwarf_Debug &dbg, const Dwarf_Die &die) :
-		DebuggingInformationEntry(dbg, die)
+	DIEFormalParameter(const Dwarf_Debug &dbg,
+	                   const Dwarf_Die &die,
+	                   DebuggingInformationEntry *parent) :
+		DebuggingInformationEntry(dbg, die, parent)
 	{
 
 	}

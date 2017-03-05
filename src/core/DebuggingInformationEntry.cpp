@@ -31,10 +31,12 @@ std::string getDieTagName(const Dwarf_Die &die)
 
 
 DebuggingInformationEntry::DebuggingInformationEntry(const Dwarf_Debug &dbg,
-                                                     const Dwarf_Die &die)
+                                                     const Dwarf_Die &die,
+                                                     DebuggingInformationEntry *parent)
 {
 	this->dbg = dbg;
 	this->die = die;
+	if (parent) this->parent = parent;
 	
 	loadChildren();
 }
@@ -77,16 +79,16 @@ void DebuggingInformationEntry::addChildDie(const Dwarf_Die &child_die)
 	std::string tag_name = getDieTagName(child_die);
 
 	if (tag_name == "DW_TAG_subprogram")
-		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIESubprogram(dbg, child_die)));
+		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIESubprogram(dbg, child_die, this)));
 
 	else if (tag_name == "DW_TAG_formal_parameter")
-		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIEFormalParameter(dbg, child_die)));
+		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIEFormalParameter(dbg, child_die, this)));
 
 	else if (tag_name == "DW_TAG_variable")
-		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIEVariable(dbg, child_die)));
+		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIEVariable(dbg, child_die, this)));
 
 	else if (tag_name == "DW_TAG_base_type")
-		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIEBaseType(dbg, child_die)));
+		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIEBaseType(dbg, child_die, this)));
 	
 	else
 	{
@@ -145,6 +147,11 @@ std::string DebuggingInformationEntry::getTagName()
 		procmsg("[DWARF_ERROR] Error in dwarf_get_TAG_name!\n");
 
 	return tag_name;
+}
+
+DebuggingInformationEntry *DebuggingInformationEntry::getParent()
+{
+	return parent;
 }
 
 std::vector<std::shared_ptr<DebuggingInformationEntry>> &DebuggingInformationEntry::getChildren()

@@ -13,7 +13,13 @@ void procmsg(const char* format, ...);
 class DebuggingInformationEntry
 {
 public:
-	DebuggingInformationEntry(const Dwarf_Debug &dbg, const Dwarf_Die &die);
+	DebuggingInformationEntry(const Dwarf_Debug &dbg,
+	                          const Dwarf_Die &die,
+	                          DebuggingInformationEntry *parent);
+	virtual ~DebuggingInformationEntry() {}
+
+	// Get the parent DIE of this DIE
+	DebuggingInformationEntry *getParent();
 
 	// Get the child DIEs of this DIE
 	std::vector<std::shared_ptr<DebuggingInformationEntry>> &getChildren();
@@ -39,6 +45,9 @@ private:
 	Dwarf_Die die;
 
 	Dwarf_Debug dbg;
+
+	// Parent DIE
+	DebuggingInformationEntry *parent = nullptr;
 
 	// Child DIEs
 	std::vector<std::shared_ptr<DebuggingInformationEntry>> children;

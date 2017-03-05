@@ -13,7 +13,7 @@ CUHeader::CUHeader(const Dwarf_Debug &dbg)
 		procmsg("[DWARF_ERROR] Error getting sibling of CU! %s\n", dwarf_errmsg(err));
 
 	// Initialize the root DIE and assign its internal type
-	root_die = std::make_unique<DIECompileUnit>(dbg, cu_die);
+	root_die = std::make_unique<DIECompileUnit>(dbg, cu_die, nullptr);
 	root_die->loadAttributes();
 }
 

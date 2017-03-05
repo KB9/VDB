@@ -11,8 +11,10 @@
 class DIECompileUnit : public DebuggingInformationEntry
 {
 public:
-	DIECompileUnit(const Dwarf_Debug &dbg, const Dwarf_Die &die) :
-		DebuggingInformationEntry(dbg, die)
+	DIECompileUnit(const Dwarf_Debug &dbg,
+	               const Dwarf_Die &die,
+	               DebuggingInformationEntry *parent) :
+		DebuggingInformationEntry(dbg, die, parent)
 	{
 
 	}

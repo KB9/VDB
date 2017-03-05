@@ -8,8 +8,10 @@
 class DIEVariable : public DebuggingInformationEntry
 {
 public:
-	DIEVariable(const Dwarf_Debug &dbg, const Dwarf_Die &die) :
-		DebuggingInformationEntry(dbg, die)
+	DIEVariable(const Dwarf_Debug &dbg,
+	            const Dwarf_Die &die,
+	            DebuggingInformationEntry *parent) :
+		DebuggingInformationEntry(dbg, die, parent)
 	{
 
 	}

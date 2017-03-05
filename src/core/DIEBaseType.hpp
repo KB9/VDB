@@ -8,8 +8,10 @@
 class DIEBaseType : public DebuggingInformationEntry
 {
 public:
-	DIEBaseType(const Dwarf_Debug& dbg, const Dwarf_Die &die) :
-		DebuggingInformationEntry(dbg, die)
+	DIEBaseType(const Dwarf_Debug& dbg,
+	            const Dwarf_Die &die,
+	            DebuggingInformationEntry *parent) :
+		DebuggingInformationEntry(dbg, die, parent)
 	{
 
 	}

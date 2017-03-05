@@ -27,8 +27,10 @@ public:
 	// The line number the function is implemented at
 	unsigned int line_number;
 
-	DIESubprogram(const Dwarf_Debug &dbg, const Dwarf_Die &die) :
-		DebuggingInformationEntry(dbg, die)
+	DIESubprogram(const Dwarf_Debug &dbg,
+	              const Dwarf_Die &die,
+	              DebuggingInformationEntry *parent) :
+		DebuggingInformationEntry(dbg, die, parent)
 	{
 	    
 	}
