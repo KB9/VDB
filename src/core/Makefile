@@ -1,7 +1,17 @@
-CPPFILES = 	Breakpoint.cpp BreakpointTable.cpp DebuggingInformationEntry.cpp \
-			DIECompileUnit.cpp DIESubprogram.cpp DIEFormalParameter.cpp \
-			DIEVariable.cpp CUHeader.cpp DebugInfo.cpp DebugLine.cpp \
-			DebugAddressRanges.cpp DwarfDebug.cpp vdb.cpp
+CPPFILES = 	Breakpoint.cpp \
+			BreakpointTable.cpp \
+			DebuggingInformationEntry.cpp \
+			DIEBaseType.cpp \
+			DIECompileUnit.cpp \
+			DIESubprogram.cpp \
+			DIEFormalParameter.cpp \
+			DIEVariable.cpp \
+			CUHeader.cpp \
+			DebugInfo.cpp \
+			DebugLine.cpp \
+			DebugAddressRanges.cpp \
+			DwarfDebug.cpp \
+			vdb.cpp
 
 CC = 		gcc
 
