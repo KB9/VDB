@@ -77,6 +77,35 @@ void DIESubprogram::onAttributeLoaded(const Dwarf_Attribute &attr,
       procmsg("[DWARF] [DIESubprogram] Saving attribute: DW_AT_decl_line (%d)\n", value);
       break;
    }
+
+   case DW_AT_frame_base:
+   {
+      Dwarf_Unsigned expr_len = 0;
+      Dwarf_Ptr block_ptr = NULL;
+      dwarf_formexprloc(attr, &expr_len, &block_ptr, nullptr);
+      frame_base_length = expr_len;
+      frame_base_data = block_ptr;
+
+      uint8_t *data = (uint8_t *)frame_base_data;
+      procmsg("[DWARF] [DIESubprogram] Saving attribute: DW_AT_frame_base (0x%x: %d byte block)\n", data[0], expr_len);
+
+      // data[0] is 0x9c, which is the code DW_OP_call_frame_cfa operation.
+      // CFA stands for Canonical Frame Address, which is call frame address on the stack.
+      // CFA defined to be value of stack pointer at call site in previous frame.
+      //    (which may be different from its value on entry to the current frame)
+
+      // procmsg("ATTEMPTING TO CREATE LOCLIST FROM EXPR...\n");
+      // Dwarf_Locdesc *loc_desc = nullptr;
+      // Dwarf_Signed list_len = 0;
+      // dwarf_loclist_from_expr(dbg, block_ptr, expr_len, &loc_desc, &list_len, nullptr);
+      // procmsg("Locdesc: ld_lopc=0x%llx ld_hipc=0x%llx ld_cents=%lu\n");
+
+      // // ld_cents tells how many entries ld_s points to. If 0, don't read.
+      // procmsg("RETRIEVING LOC...\n");
+      // Dwarf_Loc *loc = loc_desc->ld_s;
+      // procmsg("Loc: lr_atom=%x lr_number=%lu lr_number2=%lu lr_offset=%lx\n");
+      // break;
+   }
    
    default:
       procmsg("[DWARF] [DIESubprogram] Ignoring attribute...\n");

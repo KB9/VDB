@@ -27,6 +27,10 @@ public:
 	// The line number the function is implemented at
 	unsigned int line_number;
 
+	// The length in bytes of the data pointed to by the frame base data
+	unsigned int frame_base_length;
+	void *frame_base_data;
+
 	DIESubprogram(const Dwarf_Debug &dbg,
 	              const Dwarf_Die &die,
 	              DebuggingInformationEntry *parent) :
