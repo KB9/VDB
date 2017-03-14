@@ -17,6 +17,10 @@ public:
 	// The line number this formal parameter is defined on
 	unsigned int line_number;
 
+	// The length of the location data in bytes
+	unsigned int location_data_length;
+	void *location_data = nullptr;
+
 	DIEFormalParameter(const Dwarf_Debug &dbg,
 	                   const Dwarf_Die &die,
 	                   DebuggingInformationEntry *parent) :
