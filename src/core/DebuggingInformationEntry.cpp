@@ -37,7 +37,11 @@ DebuggingInformationEntry::DebuggingInformationEntry(const Dwarf_Debug &dbg,
 	this->dbg = dbg;
 	this->die = die;
 	if (parent) this->parent = parent;
-	
+}
+
+void DebuggingInformationEntry::init()
+{
+	loadAttributes();
 	loadChildren();
 }
 
@@ -78,25 +82,28 @@ void DebuggingInformationEntry::addChildDie(const Dwarf_Die &child_die)
 {
 	std::string tag_name = getDieTagName(child_die);
 
+	std::shared_ptr<DebuggingInformationEntry> obj = nullptr;
 	if (tag_name == "DW_TAG_subprogram")
-		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIESubprogram(dbg, child_die, this)));
-
+		obj = std::make_shared<DIESubprogram>(dbg, child_die, this);
 	else if (tag_name == "DW_TAG_formal_parameter")
-		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIEFormalParameter(dbg, child_die, this)));
-
+		obj = std::make_shared<DIEFormalParameter>(dbg, child_die, this);
 	else if (tag_name == "DW_TAG_variable")
-		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIEVariable(dbg, child_die, this)));
-
+		obj = std::make_shared<DIEVariable>(dbg, child_die, this);
 	else if (tag_name == "DW_TAG_base_type")
-		children.push_back(std::shared_ptr<DebuggingInformationEntry>(new DIEBaseType(dbg, child_die, this)));
-	
+		obj = std::make_shared<DIEBaseType>(dbg, child_die, this);
 	else
 	{
 		procmsg("[DWARF] [%s] Ignoring child DIE type: %s\n", getTagName().c_str(), getDieTagName(child_die).c_str());
 		return;
 	}
 
-	children.back()->loadAttributes();
+	// If a DIE was created, initialize its values and push it into this DIE's
+	// list of children
+	if (obj)
+	{
+		obj->init();
+		children.push_back(obj);
+	}
 }
 
 void DebuggingInformationEntry::loadAttributes()

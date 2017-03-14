@@ -18,6 +18,8 @@ public:
 	                          DebuggingInformationEntry *parent);
 	virtual ~DebuggingInformationEntry() {}
 
+	void init();
+
 	// Get the parent DIE of this DIE
 	DebuggingInformationEntry *getParent();
 
@@ -27,9 +29,6 @@ public:
 	// Gets the tag name associated with this DIE
 	std::string getTagName();
 
-	// NOTE: Had to make this callable externally as PV overriden methods can't be called in constructor/destructor
-	void loadAttributes();
-
 	Dwarf_Die &getInternalDie();
 
 protected:
@@ -38,6 +37,7 @@ protected:
 	                               const Dwarf_Half &form) = 0;
 	
 private:
+	void loadAttributes();
 	void loadChildren();
 	void addChildDie(const Dwarf_Die &child_die);
 	

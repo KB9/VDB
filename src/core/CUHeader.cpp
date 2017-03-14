@@ -14,7 +14,7 @@ CUHeader::CUHeader(const Dwarf_Debug &dbg)
 
 	// Initialize the root DIE and assign its internal type
 	root_die = std::make_unique<DIECompileUnit>(dbg, cu_die, nullptr);
-	root_die->loadAttributes();
+	root_die->init();
 }
 
 // Recursive method to get all children (below the specified DIE) in the DIE
