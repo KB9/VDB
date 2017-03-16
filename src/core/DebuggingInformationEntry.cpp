@@ -4,6 +4,7 @@
 #include "DIEFormalParameter.hpp"
 #include "DIEVariable.hpp"
 #include "DIEBaseType.hpp"
+#include "DIELexicalBlock.hpp"
 
 #include <cstring>
 
@@ -91,6 +92,8 @@ void DebuggingInformationEntry::addChildDie(const Dwarf_Die &child_die)
 		obj = std::make_shared<DIEVariable>(dbg, child_die, this);
 	else if (tag_name == "DW_TAG_base_type")
 		obj = std::make_shared<DIEBaseType>(dbg, child_die, this);
+	else if (tag_name == "DW_TAG_lexical_block")
+		obj = std::make_shared<DIELexicalBlock>(dbg, child_die, this);
 	else
 	{
 		procmsg("[DWARF] [%s] Ignoring child DIE type: %s\n", getTagName().c_str(), getDieTagName(child_die).c_str());

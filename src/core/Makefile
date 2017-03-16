@@ -3,6 +3,7 @@ CPPFILES = 	Breakpoint.cpp \
 			DebuggingInformationEntry.cpp \
 			DIEBaseType.cpp \
 			DIECompileUnit.cpp \
+			DIELexicalBlock.cpp \
 			DIESubprogram.cpp \
 			DIEFormalParameter.cpp \
 			DIEVariable.cpp \
