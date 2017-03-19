@@ -7,6 +7,12 @@ DebugInfo::DebugInfo(const Dwarf_Debug &dbg) : dbg(dbg)
 {
 	// Load the compilation unit headers
 	loadCUHeaders();
+
+	// Load the offsets of each DIE into the offset map
+	for (auto cu_header : getCUHeaders())
+	{
+		loadOffsetMap(cu_header.root_die, dies_by_offset);
+	}
 }
 
 void DebugInfo::loadCUHeaders()
@@ -28,12 +34,12 @@ void DebugInfo::loadCUHeaders()
 
 		if (result == DW_DLV_OK)
 		{
-	        std::shared_ptr<CUHeader> header(new CUHeader(dbg));
-			header->length = cu_header_length;
-			header->version_stamp = version_stamp;
-			header->abbrev_offset = abbrev_offset;
-			header->address_size = address_size;
-			header->next_cu_header = next_cu_header;
+			CUHeader header(dbg);
+			header.length = cu_header_length;
+			header.version_stamp = version_stamp;
+			header.abbrev_offset = abbrev_offset;
+			header.address_size = address_size;
+			header.next_cu_header = next_cu_header;
 
 			headers.push_back(std::move(header));
         }
@@ -44,7 +50,33 @@ void DebugInfo::loadCUHeaders()
 		procmsg("[DWARF_ERROR] Error loading CU headers!\n");
 }
 
-std::vector<std::shared_ptr<CUHeader>> &DebugInfo::getCUHeaders()
+std::vector<CUHeader> &DebugInfo::getCUHeaders()
 {
 	return headers;
+}
+
+void DebugInfo::loadOffsetMap(std::shared_ptr<DebuggingInformationEntry> die,
+                              OffsetMap &offset_map)
+{
+	Dwarf_Off offset;
+	dwarf_dieoffset(die->getInternalDie(), &offset, 0);
+	offset_map[offset] = die;
+	procmsg("[DIE_OFFSET] Offset 0x%x -> Address 0x%x\n", offset, &(*die));
+
+	for (auto &child_die : die->getChildren())
+	{
+		loadOffsetMap(child_die, offset_map);
+	}
+}
+
+std::shared_ptr<DebuggingInformationEntry> DebugInfo::getDIEByOffset(unsigned long long offset)
+{
+	for (auto kv_pair : dies_by_offset)
+	{
+		if (kv_pair.first == offset)
+		{
+			return kv_pair.second;
+		}
+	}
+	return nullptr;
 }

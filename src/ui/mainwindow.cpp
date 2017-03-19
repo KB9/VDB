@@ -45,10 +45,10 @@ void MainWindow::actionImportExecutable()
 
     // Find the associated source files
     std::shared_ptr<DwarfDebug> dwarf = vdb->getDwarfDebugData();
-    for (std::shared_ptr<CUHeader> header : dwarf->info()->getCUHeaders())
+    for (CUHeader &header : dwarf->info()->getCUHeaders())
     {
-        QString filename = QString(header->root_die->getName().c_str());
-        QString directory = QString(header->root_die->getCompDir().c_str());
+        QString filename = QString(header.root_die->getName().c_str());
+        QString directory = QString(header.root_die->getCompDir().c_str());
 
         QTreeWidgetItem *file_item = new QTreeWidgetItem((QTreeWidget *)0, QStringList(filename));
         if (ui->fileTreeWidget->findItems(directory, 0).size() == 0)
