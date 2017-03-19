@@ -4,6 +4,7 @@ CPPFILES = 	Breakpoint.cpp \
 			DIEBaseType.cpp \
 			DIECompileUnit.cpp \
 			DIELexicalBlock.cpp \
+			DIEPointerType.cpp \
 			DIESubprogram.cpp \
 			DIEFormalParameter.cpp \
 			DIEVariable.cpp \
