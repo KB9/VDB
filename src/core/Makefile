@@ -1,18 +1,19 @@
 CPPFILES = 	Breakpoint.cpp \
 			BreakpointTable.cpp \
-			DebuggingInformationEntry.cpp \
-			DIEBaseType.cpp \
-			DIECompileUnit.cpp \
-			DIELexicalBlock.cpp \
-			DIEPointerType.cpp \
-			DIESubprogram.cpp \
-			DIEFormalParameter.cpp \
-			DIEVariable.cpp \
-			CUHeader.cpp \
-			DebugInfo.cpp \
-			DebugLine.cpp \
-			DebugAddressRanges.cpp \
-			DwarfDebug.cpp \
+			dwarf/DebuggingInformationEntry.cpp \
+			dwarf/DIEBaseType.cpp \
+			dwarf/DIECompileUnit.cpp \
+			dwarf/DIELexicalBlock.cpp \
+			dwarf/DIEPointerType.cpp \
+			dwarf/DIESubprogram.cpp \
+			dwarf/DIEFormalParameter.cpp \
+			dwarf/DIEVariable.cpp \
+			dwarf/CUHeader.cpp \
+			dwarf/DebugInfo.cpp \
+			dwarf/DebugLine.cpp \
+			dwarf/DebugAddressRanges.cpp \
+			dwarf/DwarfDebug.cpp \
+			dwarf/DwarfExprInterpreter.cpp \
 			vdb.cpp
 
 CC = 		gcc

@@ -7,7 +7,7 @@
 #include <sys/user.h>
 #include <stdio.h>
 
-#include "DwarfDebug.hpp"
+#include "dwarf/DwarfDebug.hpp"
 #include <cstring>
 
 // TODO: Move this function to its own dedicated file

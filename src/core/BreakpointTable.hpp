@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "Breakpoint.hpp"
-#include "DwarfDebug.hpp"
+#include "dwarf/DwarfDebug.hpp"
 
 class BreakpointTable
 {

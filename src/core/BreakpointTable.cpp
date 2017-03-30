@@ -1,6 +1,6 @@
 #include "BreakpointTable.hpp"
 
-#include "DebugLine.hpp"
+#include "dwarf/DebugLine.hpp"
 
 #include <cstring>
 

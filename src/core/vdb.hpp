@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <memory>
 
-#include "DwarfDebug.hpp"
+#include "dwarf/DwarfDebug.hpp"
 #include "BreakpointTable.hpp"
 
 class VDB
