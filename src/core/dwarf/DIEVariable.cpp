@@ -29,6 +29,16 @@ void DIEVariable::onAttributeLoaded(const Dwarf_Attribute &attr,
 		break;
 	}
 
+	case DW_AT_location:
+	{
+		Dwarf_Unsigned expr_len = 0;
+		Dwarf_Ptr block_ptr = NULL;
+		dwarf_formexprloc(attr, &expr_len, &block_ptr, nullptr);
+		location_data_length = expr_len;
+		location_data = block_ptr;
+		procmsg("[DWARF] [DIEVariable] Saving attribute: DW_AT_location (%d byte block)\n", expr_len);
+	}
+
 	default:
 		procmsg("[DWARF] [DIEVariable] Ignoring attribute...\n");
 	}
