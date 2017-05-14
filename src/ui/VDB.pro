@@ -43,3 +43,4 @@ FORMS    += mainwindow.ui
 LIBS += -L"../../bin/core" -lvdb
 
 INCLUDEPATH += "../core/"
+INCLUDEPATH += "/usr/include/libdwarf/"

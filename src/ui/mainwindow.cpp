@@ -8,7 +8,7 @@
 
 #include "codeeditor.h"
 
-#include "CUHeader.hpp"
+#include "dwarf/CUHeader.hpp"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
