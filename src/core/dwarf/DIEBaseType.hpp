@@ -16,7 +16,10 @@ public:
 
 	}
 
+	unsigned int getEncoding() const;
 	const char *getEncodingMeaning();
+
+	unsigned int getByteSize() const;
 
 private:
 	std::string name;

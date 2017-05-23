@@ -41,6 +41,11 @@ void DIEBaseType::onAttributeLoaded(const Dwarf_Attribute &attr,
 	}
 }
 
+unsigned int DIEBaseType::getEncoding() const
+{
+	return encoding;
+}
+
 const char *DIEBaseType::getEncodingMeaning()
 {
 	switch (encoding)
@@ -62,4 +67,9 @@ const char *DIEBaseType::getEncodingMeaning()
 	case DW_ATE_decimal_float:	return "decimal floating-point number";
 	default:					return "unknown";
 	}
+}
+
+unsigned int DIEBaseType::getByteSize() const
+{
+	return byte_size;
 }
