@@ -14,6 +14,7 @@ CPPFILES = 	Breakpoint.cpp \
 			dwarf/DebugAddressRanges.cpp \
 			dwarf/DwarfDebug.cpp \
 			dwarf/DwarfExprInterpreter.cpp \
+			ValueDeducer.cpp \
 			vdb.cpp
 
 CC = 		gcc
