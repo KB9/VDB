@@ -30,6 +30,8 @@ public:
 			unw_destroy_addr_space(addr_space);
 			return;
 		}
+
+		reset();
 	}
 
 	~Unwinder()
