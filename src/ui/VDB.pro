@@ -29,14 +29,16 @@ SOURCES += main.cpp\
     highlighter.cpp \
     filetabs.cpp \
     filetree.cpp \
-    linenumberarea.cpp
+    linenumberarea.cpp \
+    watchtable.cpp
 
 HEADERS  += mainwindow.h \
     linenumberarea.h \
     codeeditor.h \
     highlighter.h \
     filetabs.h \
-    filetree.h
+    filetree.h \
+    watchtable.h
 
 FORMS    += mainwindow.ui
 
