@@ -10,6 +10,11 @@
 
 #include "dwarf/CUHeader.hpp"
 
+void onBreakpointHitCallback(ProcessDebugger *debugger, Breakpoint breakpoint)
+{
+    debugger->stepOver();
+}
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -67,7 +72,7 @@ void MainWindow::actionImportExecutable()
 
 void MainWindow::actionRunTarget()
 {
-    vdb->run();
+    vdb->getDebugEngine()->run(&onBreakpointHitCallback);
 }
 
 void MainWindow::onFileSelected(QTreeWidgetItem *item, int column)

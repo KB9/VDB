@@ -15,6 +15,8 @@ CPPFILES = 	Breakpoint.cpp \
 			dwarf/DwarfDebug.cpp \
 			dwarf/DwarfExprInterpreter.cpp \
 			ValueDeducer.cpp \
+			ProcessDebugger.cpp \
+			DebugEngine.cpp \
 			vdb.cpp
 
 CC = 		gcc

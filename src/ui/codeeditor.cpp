@@ -165,7 +165,7 @@ void CodeEditor::toggleBreakpoint(unsigned int line_number)
 {
     if (breakpoints.contains(line_number))
     {
-        bool removed = vdb->breakpoint_table->removeBreakpoint(filepath.toStdString().c_str(), line_number);
+        bool removed = vdb->getDebugEngine()->getBreakpoints()->removeBreakpoint(filepath.toStdString().c_str(), line_number);
         if (removed)
         {
             int index = breakpoints.indexOf(line_number);
@@ -174,7 +174,7 @@ void CodeEditor::toggleBreakpoint(unsigned int line_number)
     }
     else
     {
-        bool added = vdb->breakpoint_table->addBreakpoint(filepath.toStdString().c_str(), line_number);
+        bool added = vdb->getDebugEngine()->getBreakpoints()->addBreakpoint(filepath.toStdString().c_str(), line_number);
         if (added) breakpoints.push_back(line_number);
     }
 }
