@@ -7,6 +7,8 @@
 #include <sys/types.h>
 #include <memory>
 
+#include <mutex>
+
 #include "Breakpoint.hpp"
 #include "dwarf/DwarfDebug.hpp"
 
@@ -28,6 +30,8 @@ public:
 private:
 	pid_t target_pid;
 	std::shared_ptr<DwarfDebug> dwarf = nullptr;
+
+	std::mutex mtx;
 
 	std::unordered_map<uint64_t, Breakpoint> breakpoints_by_address;
 };
