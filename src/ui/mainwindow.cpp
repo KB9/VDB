@@ -32,7 +32,7 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::actionImportExecutable()
+void MainWindow::importExecutable()
 {
     // Open a file dialog to select the appropriate file
     QFileDialog dialog;
@@ -70,10 +70,25 @@ void MainWindow::actionImportExecutable()
     }
 }
 
-void MainWindow::actionRunTarget()
+void MainWindow::startDebugging()
 {
     vdb->getDebugEngine()->run(&onBreakpointHitCallback);
     ui->watchTable->setDebugEngine(vdb->getDebugEngine().get());
+}
+
+void MainWindow::stepOver()
+{
+
+}
+
+void MainWindow::stepInto()
+{
+
+}
+
+void MainWindow::stepOut()
+{
+
 }
 
 void MainWindow::onFileSelected(QTreeWidgetItem *item, int column)

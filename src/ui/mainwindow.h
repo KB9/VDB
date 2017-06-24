@@ -21,8 +21,12 @@ public:
     ~MainWindow();
 
 private slots:
-    void actionImportExecutable();
-    void actionRunTarget();
+    void importExecutable();
+    void startDebugging();
+
+    void stepOver();
+    void stepInto();
+    void stepOut();
 
     void onFileSelected(QTreeWidgetItem *item, int column);
 
