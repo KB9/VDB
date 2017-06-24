@@ -9,7 +9,6 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#include <atomic>
 
 #include "BreakpointTable.hpp"
 #include "dwarf/DwarfDebug.hpp"
@@ -37,12 +36,16 @@ typedef void (*BreakpointCallback)(ProcessDebugger *debugger, Breakpoint breakpo
 class ProcessDebugger
 {
 public:
+
 	ProcessDebugger(char *executable_name,
 					std::shared_ptr<BreakpointTable> breakpoint_table,
 					BreakpointCallback breakpoint_callback);
 	~ProcessDebugger();
 
 	void stepOver();
+
+	void getValue(VariableLocExpr expr, DebuggingInformationEntry *type_die, char **deduced_value);
+	void deduceValue();
 
 private:
 	char *target_name = NULL;
@@ -58,6 +61,12 @@ private:
 	std::condition_variable cv;
 
 	BreakpointAction breakpoint_action = UNDEFINED;
+
+	// Variable related to retrieving the values of the target's variables
+	bool deduction_enabled = false;
+	char **deduced_value = nullptr;
+	VariableLocExpr loc_expr;
+	DebuggingInformationEntry *type_die = nullptr;
 
 	bool threadedDebug();
 	bool runTarget();

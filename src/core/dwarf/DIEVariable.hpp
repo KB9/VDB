@@ -20,6 +20,8 @@ public:
 
 	unsigned int line_number;
 
+	uint64_t type_offset;
+
 	// The length of the location data in bytes
 	unsigned int location_data_length;
 	void *location_data = nullptr;

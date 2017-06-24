@@ -22,6 +22,8 @@ public:
 
 	std::shared_ptr<BreakpointTable> getBreakpoints();
 
+	char *getValue(const char *variable_name);
+
 private:
 	char *target_name = NULL;
 

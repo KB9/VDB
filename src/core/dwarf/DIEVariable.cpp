@@ -37,6 +37,16 @@ void DIEVariable::onAttributeLoaded(const Dwarf_Attribute &attr,
 		location_data_length = expr_len;
 		location_data = block_ptr;
 		procmsg("[DWARF] [DIEVariable] Saving attribute: DW_AT_location (%d byte block)\n", expr_len);
+		break;
+	}
+
+	case DW_AT_type:
+	{
+		Dwarf_Off type_offset = 0;
+		dwarf_formref(attr, &type_offset, 0);
+		this->type_offset = type_offset;
+		procmsg("[DWARF] [DIEVariable] Saving attribute: DW_AT_type (0x%llx)\n", type_offset);
+		break;
 	}
 
 	default:

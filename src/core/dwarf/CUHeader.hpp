@@ -16,8 +16,11 @@
 #include <iostream>
 #include <cstring>
 
+// TODO: Needs a name change/re-structure for type DIE offset to make sense
 struct VariableLocExpr
 {
+	uint64_t type_die_offset;
+
 	uint8_t frame_base;
 	uint8_t location_op;
 	uint8_t location_param;
@@ -138,6 +141,8 @@ private:
 			if (strcmp(var_name, die_ptr->name.c_str()) == 0)
 			{
 				VariableLocExpr expr = {0};
+
+				expr.type_die_offset = die_ptr->type_offset;
 
 				// Get the first byte block
 				expr.location_op = ((uint8_t *)die_ptr->location_data)[0];

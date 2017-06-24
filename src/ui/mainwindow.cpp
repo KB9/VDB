@@ -12,7 +12,7 @@
 
 void onBreakpointHitCallback(ProcessDebugger *debugger, Breakpoint breakpoint)
 {
-    debugger->stepOver();
+    //debugger->stepOver();
 }
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -73,6 +73,7 @@ void MainWindow::actionImportExecutable()
 void MainWindow::actionRunTarget()
 {
     vdb->getDebugEngine()->run(&onBreakpointHitCallback);
+    ui->watchTable->setDebugEngine(vdb->getDebugEngine().get());
 }
 
 void MainWindow::onFileSelected(QTreeWidgetItem *item, int column)

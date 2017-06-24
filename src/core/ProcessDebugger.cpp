@@ -1,8 +1,11 @@
 #include "ProcessDebugger.hpp"
 
+#include "dwarf/DwarfExprInterpreter.hpp"
+#include "ValueDeducer.hpp"
+
 ProcessDebugger::ProcessDebugger(char *executable_name,
-								 std::shared_ptr<BreakpointTable> breakpoint_table,
-								 BreakpointCallback breakpoint_callback)
+                                 std::shared_ptr<BreakpointTable> breakpoint_table,
+                                 BreakpointCallback breakpoint_callback)
 {
 	if (target_name != NULL) delete target_name;
 	target_name = new char[strlen(executable_name) + 1];
@@ -31,6 +34,54 @@ void ProcessDebugger::stepOver()
 {
 	breakpoint_action = STEP_OVER;
 	cv.notify_all();
+}
+
+void ProcessDebugger::getValue(VariableLocExpr expr, DebuggingInformationEntry *type_die, char **deduced_value)
+{
+	deduction_enabled = true;
+
+	this->deduced_value = deduced_value;
+	this->loc_expr = expr;
+	this->type_die = type_die;
+	cv.notify_all();
+}
+
+void ProcessDebugger::deduceValue()
+{
+	deduction_enabled = false;
+
+	// Get the address of the variable in the target process' memory
+	DwarfExprInterpreter interpreter(target_pid);
+	uint64_t address = interpreter.parse(new uint8_t[1] { loc_expr.frame_base },
+	                                     new uint8_t[2] { loc_expr.location_op, loc_expr.location_param });
+
+	procmsg("[GET_VALUE] Found variable address: 0x%x\n", address);
+
+	// Initialize the value deducer
+	ValueDeducer deducer(target_pid);
+	std::string value;
+
+	procmsg("[GET_VALUE] DWARF variable type offset: 0x%llx\n", loc_expr.type_die_offset);
+
+	// Get the relevant type DIE and deduce the value of the variable
+	DIEBaseType *base_type_die = dynamic_cast<DIEBaseType *>(type_die);
+	if (base_type_die != nullptr)
+	{
+		// Deduce the value as a base type
+		value = deducer.deduce(address, *base_type_die);
+		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
+		*deduced_value = (char *)value.c_str();
+		return;
+	}
+	DIEPointerType *pointer_type_die = dynamic_cast<DIEPointerType *>(type_die);
+	if (pointer_type_die != nullptr)
+	{
+		// Deduce the value as a pointer type
+		value = deducer.deduce(address, *pointer_type_die);
+		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
+		*deduced_value = (char *)value.c_str();
+		return;
+	}
 }
 
 // ===== EVERYTHING BELOW THIS LINE IS RUN IN THE PRIVATE DEBUGGER THREAD =====
@@ -150,7 +201,12 @@ void ProcessDebugger::onBreakpointHit()
 
 	// Wait until an action is taken for this particular breakpoint
 	std::unique_lock<std::mutex> lck(mtx);
-	while (breakpoint_action == UNDEFINED) cv.wait(lck);
+	while (breakpoint_action == UNDEFINED)
+	{
+		if (deduction_enabled) deduceValue();
+
+		cv.wait(lck);
+	}
 
 	// DEBUG: Output the action being performed at this breakpoint
 	switch (breakpoint_action)
