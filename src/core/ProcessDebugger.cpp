@@ -2,10 +2,14 @@
 
 #include "dwarf/DwarfExprInterpreter.hpp"
 #include "ValueDeducer.hpp"
+#include "dwarf/DIEVariable.hpp"
+
+#include <cstring>
 
 ProcessDebugger::ProcessDebugger(char *executable_name,
                                  std::shared_ptr<BreakpointTable> breakpoint_table,
-                                 BreakpointCallback breakpoint_callback)
+                                 BreakpointCallback breakpoint_callback,
+                                 std::shared_ptr<DwarfDebug> debug_data)
 {
 	if (target_name != NULL) delete target_name;
 	target_name = new char[strlen(executable_name) + 1];
@@ -13,6 +17,7 @@ ProcessDebugger::ProcessDebugger(char *executable_name,
 
 	this->breakpoint_table = breakpoint_table;
 	this->breakpoint_callback = breakpoint_callback;
+	this->debug_data = debug_data;
 
 	is_debugging = true;
 	debug_thread = std::thread(&ProcessDebugger::threadedDebug, this);
@@ -30,58 +35,21 @@ ProcessDebugger::~ProcessDebugger()
 	debug_thread.join();
 }
 
+void ProcessDebugger::enqueue(std::unique_ptr<DebugMessage> msg)
+{
+	message_queue_in.push(std::move(msg));
+	cv.notify_all();
+}
+
+std::unique_ptr<DebugMessage> ProcessDebugger::tryPoll()
+{
+	return std::move(message_queue_out.tryPop());
+}
+
 void ProcessDebugger::stepOver()
 {
 	breakpoint_action = STEP_OVER;
 	cv.notify_all();
-}
-
-void ProcessDebugger::getValue(VariableLocExpr expr, DebuggingInformationEntry *type_die, char **deduced_value)
-{
-	deduction_enabled = true;
-
-	this->deduced_value = deduced_value;
-	this->loc_expr = expr;
-	this->type_die = type_die;
-	cv.notify_all();
-}
-
-void ProcessDebugger::deduceValue()
-{
-	deduction_enabled = false;
-
-	// Get the address of the variable in the target process' memory
-	DwarfExprInterpreter interpreter(target_pid);
-	uint64_t address = interpreter.parse(new uint8_t[1] { loc_expr.frame_base },
-	                                     new uint8_t[2] { loc_expr.location_op, loc_expr.location_param });
-
-	procmsg("[GET_VALUE] Found variable address: 0x%x\n", address);
-
-	// Initialize the value deducer
-	ValueDeducer deducer(target_pid);
-	std::string value;
-
-	procmsg("[GET_VALUE] DWARF variable type offset: 0x%llx\n", loc_expr.type_die_offset);
-
-	// Get the relevant type DIE and deduce the value of the variable
-	DIEBaseType *base_type_die = dynamic_cast<DIEBaseType *>(type_die);
-	if (base_type_die != nullptr)
-	{
-		// Deduce the value as a base type
-		value = deducer.deduce(address, *base_type_die);
-		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
-		*deduced_value = (char *)value.c_str();
-		return;
-	}
-	DIEPointerType *pointer_type_die = dynamic_cast<DIEPointerType *>(type_die);
-	if (pointer_type_die != nullptr)
-	{
-		// Deduce the value as a pointer type
-		value = deducer.deduce(address, *pointer_type_die);
-		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
-		*deduced_value = (char *)value.c_str();
-		return;
-	}
 }
 
 // ===== EVERYTHING BELOW THIS LINE IS RUN IN THE PRIVATE DEBUGGER THREAD =====
@@ -203,7 +171,17 @@ void ProcessDebugger::onBreakpointHit()
 	std::unique_lock<std::mutex> lck(mtx);
 	while (breakpoint_action == UNDEFINED)
 	{
-		if (deduction_enabled) deduceValue();
+		while (!message_queue_in.empty())
+		{
+			std::unique_ptr<DebugMessage> msg = message_queue_in.tryPop();
+			if (msg == nullptr) continue;
+
+			GetValueMessage *value_msg = dynamic_cast<GetValueMessage *>(msg.get());
+			if (value_msg != nullptr)
+				deduceValue(value_msg);
+
+			message_queue_out.push(std::move(msg));
+		}
 
 		cv.wait(lck);
 	}
@@ -246,4 +224,59 @@ void ProcessDebugger::onBreakpointHit()
 
 	// Reset the breakpoint action
 	breakpoint_action = UNDEFINED;
+}
+
+void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
+{
+	// Get the first location expression for the specified variable name
+	VariableLocExpr loc_expr;
+	bool found = false;
+	for (CUHeader header : debug_data->info()->getCUHeaders())
+	{
+		auto loc_exprs = header.getLocExprsFromVarName<DIEVariable>(value_msg->variable_name);
+		if (loc_exprs.size() > 0)
+		{
+			loc_expr = loc_exprs.at(0);
+			found = true;
+			break;
+		}
+	}
+
+	// If no results were found for the specified variable name, return
+	if (!found) return;
+
+	// Get the address of the variable in the target process' memory
+	DwarfExprInterpreter interpreter(target_pid);
+	uint64_t address = interpreter.parse(new uint8_t[1] { loc_expr.frame_base },
+	                                     new uint8_t[2] { loc_expr.location_op, loc_expr.location_param });
+
+	procmsg("[GET_VALUE] Found variable address: 0x%x\n", address);
+
+	// Initialize the value deducer
+	ValueDeducer deducer(target_pid);
+	std::string value;
+
+	procmsg("[GET_VALUE] DWARF variable type offset: 0x%llx\n", loc_expr.type_die_offset);
+
+	// Get the relevant type DIE and deduce the value of the variable
+	DebuggingInformationEntry *type_die = debug_data->info()->getDIEByOffset(loc_expr.type_die_offset).get();
+	DIEBaseType *base_type_die = dynamic_cast<DIEBaseType *>(type_die);
+	if (base_type_die != nullptr)
+	{
+		// Deduce the value as a base type
+		value = deducer.deduce(address, *base_type_die);
+		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
+        value_msg->value = new char[value.length() + 1];
+		strcpy(value_msg->value, ((char *)value.c_str()));
+	}
+
+	DIEPointerType *pointer_type_die = dynamic_cast<DIEPointerType *>(type_die);
+	if (pointer_type_die != nullptr)
+	{
+		// Deduce the value as a pointer type
+		value = deducer.deduce(address, *pointer_type_die);
+		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
+		value_msg->value = new char[value.length() + 1];
+		strcpy(value_msg->value, ((char *)value.c_str()));
+	}
 }

@@ -22,7 +22,15 @@ public:
 
 	std::shared_ptr<BreakpointTable> getBreakpoints();
 
-	char *getValue(const char *variable_name);
+	void sendMessage(std::unique_ptr<DebugMessage> msg)
+	{
+		debugger->enqueue(std::move(msg));
+	}
+	
+	std::unique_ptr<DebugMessage> tryPoll()
+	{
+		return std::move(debugger->tryPoll());
+	}
 
 private:
 	char *target_name = NULL;

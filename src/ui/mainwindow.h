@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QTreeWidget>
+#include <QTimer>
 
 #include "vdb.hpp"
 
@@ -28,12 +29,16 @@ private slots:
     void stepInto();
     void stepOut();
 
+    void pollDebugEngine();
+
     void onFileSelected(QTreeWidgetItem *item, int column);
 
 private:
     Ui::MainWindow *ui;
 
     std::shared_ptr<VDB> vdb = nullptr;
+
+    QTimer *timer;
 };
 
 #endif // MAINWINDOW_H

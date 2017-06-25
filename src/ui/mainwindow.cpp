@@ -25,11 +25,28 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(onFileSelected(QTreeWidgetItem*,int)));
 
     vdb = std::make_shared<VDB>();
+
+    // Initialize the polling timer
+    timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(pollDebugEngine()));
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::pollDebugEngine()
+{
+    std::unique_ptr<DebugMessage> msg = vdb->getDebugEngine()->tryPoll();
+    if (msg != nullptr)
+    {
+        GetValueMessage *value_msg = dynamic_cast<GetValueMessage *>(msg.get());
+        if (value_msg != nullptr)
+        {
+            ui->watchTable->onValueDeduced(value_msg->variable_name, value_msg->value);
+        }
+    }
 }
 
 void MainWindow::importExecutable()
@@ -74,6 +91,9 @@ void MainWindow::startDebugging()
 {
     vdb->getDebugEngine()->run(&onBreakpointHitCallback);
     ui->watchTable->setDebugEngine(vdb->getDebugEngine().get());
+
+    // Start the polling timer
+    timer->start(500);
 }
 
 void MainWindow::stepOver()

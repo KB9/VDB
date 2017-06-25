@@ -14,6 +14,8 @@ public:
 
     void setDebugEngine(DebugEngine *debug_engine);
 
+    void onValueDeduced(char *variable_name, char *value);
+
 private slots:
     void onWatchVarChanged(int row, int column);
 
