@@ -253,7 +253,7 @@ void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 	procmsg("[GET_VALUE] Found variable address: 0x%x\n", address);
 
 	// Initialize the value deducer
-	ValueDeducer deducer(target_pid);
+	ValueDeducer deducer(target_pid, debug_data);
 	std::string value;
 
 	procmsg("[GET_VALUE] DWARF variable type offset: 0x%llx\n", loc_expr.type_die_offset);
