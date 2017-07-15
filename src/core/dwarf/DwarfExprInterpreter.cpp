@@ -8,18 +8,16 @@ DwarfExprInterpreter::DwarfExprInterpreter(pid_t target_pid)
 }
 
 // Gets the address of the variable from the two specified DWARF expressions
-uint64_t DwarfExprInterpreter::parse(uint8_t *frame_base_expr, uint8_t *sub_expr)
+uint64_t DwarfExprInterpreter::parse(uint8_t *frame_base_expr, uint8_t op_code, uint8_t *op_param)
 {
 	uint8_t fb_opcode = frame_base_expr[0];
 	if (fb_opcode == DW_OP_call_frame_cfa) // 0x9C
 	{
 		// Use the Canonical Frame Address (CFA) to get this value
-		uint8_t sub_opcode = sub_expr[0];
-		if (sub_opcode == DW_OP_fbreg)
+		if (op_code == DW_OP_fbreg) // 0x91
 		{
 			// Decode the SLEB128-encoded parameter
-			uint8_t sleb128_offset = sub_expr[1];
-			int64_t offset = decodeSLEB128(&sleb128_offset);
+			int64_t offset = decodeSLEB128(op_param);
 
 			// Get the CFA and apply the offset
 			Unwinder unwinder(target_pid);

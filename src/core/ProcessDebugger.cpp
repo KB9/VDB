@@ -247,8 +247,9 @@ void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 
 	// Get the address of the variable in the target process' memory
 	DwarfExprInterpreter interpreter(target_pid);
-	uint64_t address = interpreter.parse(new uint8_t[1] { loc_expr.frame_base },
-	                                     new uint8_t[2] { loc_expr.location_op, loc_expr.location_param });
+	uint64_t address = interpreter.parse(&loc_expr.frame_base,
+	                                     loc_expr.location_op,
+	                                     loc_expr.location_param);
 
 	procmsg("[GET_VALUE] Found variable address: 0x%x\n", address);
 

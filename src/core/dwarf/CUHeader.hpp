@@ -23,7 +23,7 @@ struct VariableLocExpr
 
 	uint8_t frame_base;
 	uint8_t location_op;
-	uint8_t location_param;
+	uint8_t *location_param;
 };
 
 template <class T>
@@ -149,7 +149,7 @@ private:
 
 				// Get the second byte block if it exists
 				if (die_ptr->location_data_length > 1)
-					expr.location_param = ((uint8_t *)die_ptr->location_data)[1];
+					expr.location_param = &((uint8_t *)die_ptr->location_data)[1];
 
 				// Backtrace until a DIE which has frame base data is found
 				DebuggingInformationEntry *temp = die_ptr.get();
