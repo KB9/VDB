@@ -34,6 +34,8 @@ private slots:
     void onFileSelected(QTreeWidgetItem *item, int column);
 
 private:
+    void setBreakpointStepControlsEnabled(bool enabled);
+
     Ui::MainWindow *ui;
 
     std::shared_ptr<VDB> vdb = nullptr;

@@ -8,7 +8,6 @@
 
 ProcessDebugger::ProcessDebugger(char *executable_name,
                                  std::shared_ptr<BreakpointTable> breakpoint_table,
-                                 BreakpointCallback breakpoint_callback,
                                  std::shared_ptr<DwarfDebug> debug_data)
 {
 	if (target_name != NULL) delete target_name;
@@ -16,7 +15,6 @@ ProcessDebugger::ProcessDebugger(char *executable_name,
 	strcpy(target_name, executable_name);
 
 	this->breakpoint_table = breakpoint_table;
-	this->breakpoint_callback = breakpoint_callback;
 	this->debug_data = debug_data;
 
 	is_debugging = true;
@@ -50,6 +48,17 @@ void ProcessDebugger::stepOver()
 {
 	breakpoint_action = STEP_OVER;
 	cv.notify_all();
+}
+
+void ProcessDebugger::continueExecution()
+{
+	breakpoint_action = CONTINUE;
+	cv.notify_all();
+}
+
+bool ProcessDebugger::isDebugging()
+{
+	return is_debugging;
 }
 
 // ===== EVERYTHING BELOW THIS LINE IS RUN IN THE PRIVATE DEBUGGER THREAD =====
@@ -116,6 +125,7 @@ bool ProcessDebugger::runDebugger()
 		if (WIFEXITED(wait_status))
 		{
 			// Stop debugging
+			is_debugging = false;
 			break;
 		}
 		// If the child process was stopped midway through execution
@@ -140,10 +150,14 @@ bool ProcessDebugger::runDebugger()
 
 				// TODO: Check for other signal types
 				// TODO: Continue debugging instead of exiting debug loop
+				is_debugging = false;
 				break;
 			}
 		}
 	}
+
+	// Notify the frontend that the target process has exited
+	message_queue_out.push(std::make_unique<TargetExitMessage>());
 
 	return true;
 }
@@ -164,8 +178,8 @@ void ProcessDebugger::onBreakpointHit()
 	// DEBUG: Notify that the debug thread is waiting for a breakpoint action
 	procmsg("[BREAKPOINT_ACTION] Waiting for breakpoint action...\n");
 
-	// Notify the listener that a breakpoint has been hit
-	breakpoint_callback(this, *breakpoint);
+	// Notify the frontend that a breakpoint has been hit
+	message_queue_out.push(std::make_unique<BreakpointHitMessage>());
 
 	// Wait until an action is taken for this particular breakpoint
 	std::unique_lock<std::mutex> lck(mtx);
@@ -204,15 +218,15 @@ void ProcessDebugger::onBreakpointHit()
 	{
 		case STEP_OVER:
 		{
+			// TODO: This needs to set a breakpoint on the next line after
+			// the line this breakpoint is on.
 			breakpoint->stepOver(target_pid);
 			break;
 		}
 
 		case CONTINUE:
 		{
-			// TODO: The breakpoint will need to be reset before you can
-			// just continue. In this current state, it will crash the
-			// program upon CONTINUE-ing.
+			breakpoint->stepOver(target_pid);
 			break;
 		}
 

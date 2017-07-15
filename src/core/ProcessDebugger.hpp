@@ -30,15 +30,15 @@ enum BreakpointAction
 	CONTINUE
 };
 
-class ProcessDebugger;
-typedef void (*BreakpointCallback)(ProcessDebugger *debugger, Breakpoint breakpoint);
-
 class GetValueMessage : public DebugMessage
 {
 public:
 	char *variable_name;
 	char *value;
 };
+
+class TargetExitMessage : public DebugMessage {};
+class BreakpointHitMessage : public DebugMessage {};
 
 // This class is responsible for forking the process and forming the target and
 // debugging process. When running the target process, this class will be
@@ -50,14 +50,16 @@ public:
 
 	ProcessDebugger(char *executable_name,
 					std::shared_ptr<BreakpointTable> breakpoint_table,
-					BreakpointCallback breakpoint_callback,
 					std::shared_ptr<DwarfDebug> debug_data);
 	~ProcessDebugger();
 
+	void continueExecution();
 	void stepOver();
 
 	void enqueue(std::unique_ptr<DebugMessage> msg);
 	std::unique_ptr<DebugMessage> tryPoll();
+
+	bool isDebugging();
 
 private:
 	std::shared_ptr<DwarfDebug> debug_data = nullptr;
@@ -66,7 +68,6 @@ private:
 	pid_t target_pid;
 
 	std::shared_ptr<BreakpointTable> breakpoint_table = nullptr;
-	BreakpointCallback breakpoint_callback;
 
 	bool is_debugging;
 

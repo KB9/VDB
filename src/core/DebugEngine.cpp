@@ -21,13 +21,38 @@ DebugEngine::~DebugEngine()
 	target_name = NULL;
 }
 
-bool DebugEngine::run(BreakpointCallback breakpoint_callback)
+bool DebugEngine::run()
 {
-	debugger = std::make_shared<ProcessDebugger>(target_name, breakpoint_table, breakpoint_callback, debug_data);
+	debugger = std::make_shared<ProcessDebugger>(target_name, breakpoint_table, debug_data);
 	return true;
 }
 
 std::shared_ptr<BreakpointTable> DebugEngine::getBreakpoints()
 {
 	return breakpoint_table;
+}
+
+void DebugEngine::stepOver()
+{
+	debugger->stepOver();
+}
+
+void DebugEngine::continueExecution()
+{
+	debugger->continueExecution();
+}
+
+void DebugEngine::sendMessage(std::unique_ptr<DebugMessage> msg)
+{
+	debugger->enqueue(std::move(msg));
+}
+
+std::unique_ptr<DebugMessage> DebugEngine::tryPoll()
+{
+	return std::move(debugger->tryPoll());
+}
+
+bool DebugEngine::isDebugging()
+{
+	return debugger != nullptr && debugger->isDebugging();
 }

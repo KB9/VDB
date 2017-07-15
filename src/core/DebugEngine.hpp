@@ -18,19 +18,17 @@ public:
 	DebugEngine(const char *executable_name, std::shared_ptr<DwarfDebug> debug_data);
 	~DebugEngine();
 
-	bool run(BreakpointCallback breakpoint_callback);
+	bool run();
 
 	std::shared_ptr<BreakpointTable> getBreakpoints();
 
-	void sendMessage(std::unique_ptr<DebugMessage> msg)
-	{
-		debugger->enqueue(std::move(msg));
-	}
-	
-	std::unique_ptr<DebugMessage> tryPoll()
-	{
-		return std::move(debugger->tryPoll());
-	}
+	void stepOver();
+	void continueExecution();
+
+	void sendMessage(std::unique_ptr<DebugMessage> msg);
+	std::unique_ptr<DebugMessage> tryPoll();
+
+	bool isDebugging();
 
 private:
 	char *target_name = NULL;

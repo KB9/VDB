@@ -10,11 +10,6 @@
 
 #include "dwarf/CUHeader.hpp"
 
-void onBreakpointHitCallback(ProcessDebugger *debugger, Breakpoint breakpoint)
-{
-    //debugger->stepOver();
-}
-
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -29,6 +24,9 @@ MainWindow::MainWindow(QWidget *parent) :
     // Initialize the polling timer
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(pollDebugEngine()));
+
+    // Disable the breakpoint step controls until a breakpoint is hit
+    setBreakpointStepControlsEnabled(false);
 }
 
 MainWindow::~MainWindow()
@@ -45,6 +43,23 @@ void MainWindow::pollDebugEngine()
         if (value_msg != nullptr)
         {
             ui->watchTable->onValueDeduced(value_msg->variable_name, value_msg->value);
+        }
+
+        BreakpointHitMessage *bph_msg = dynamic_cast<BreakpointHitMessage *>(msg.get());
+        if (bph_msg != nullptr)
+        {
+            // Enable breakpoint controls so that breakpoint action can be taken
+            ui->debugButton->setEnabled(true);
+            setBreakpointStepControlsEnabled(true);
+        }
+
+        TargetExitMessage *exit_msg = dynamic_cast<TargetExitMessage *>(msg.get());
+        if (exit_msg != nullptr)
+        {
+            // Reset breakpoint control buttons to their default state
+            ui->debugButton->setText("Start Debugging");
+            ui->debugButton->setEnabled(true);
+            setBreakpointStepControlsEnabled(false);
         }
     }
 }
@@ -89,11 +104,27 @@ void MainWindow::importExecutable()
 
 void MainWindow::startDebugging()
 {
-    vdb->getDebugEngine()->run(&onBreakpointHitCallback);
-    ui->watchTable->setDebugEngine(vdb->getDebugEngine().get());
+    // If a target process is not currently being debugged
+    if (!vdb->getDebugEngine()->isDebugging())
+    {
+        vdb->getDebugEngine()->run();
+        ui->watchTable->setDebugEngine(vdb->getDebugEngine().get());
 
-    // Start the polling timer
-    timer->start(500);
+        // Start the polling timer
+        timer->start(500);
+
+        // Disable breakpoint controls until a breakpoint is hit
+        ui->debugButton->setText("Continue");
+        ui->debugButton->setEnabled(false);
+        setBreakpointStepControlsEnabled(false);
+    }
+    else
+    {
+        // Continue execution, disable breakpoint controls until another is hit
+        vdb->getDebugEngine()->continueExecution();
+        ui->debugButton->setEnabled(false);
+        setBreakpointStepControlsEnabled(false);
+    }
 }
 
 void MainWindow::stepOver()
@@ -143,4 +174,11 @@ void MainWindow::onFileSelected(QTreeWidgetItem *item, int column)
 
     // Add a new code editor tab
     ui->fileTabWidget->addTab(new CodeEditor(absolute_path, lines, vdb), filename);
+}
+
+void MainWindow::setBreakpointStepControlsEnabled(bool enabled)
+{
+    ui->stepOverButton->setEnabled(enabled);
+    ui->stepIntoButton->setEnabled(enabled);
+    ui->stepOutButton->setEnabled(enabled);
 }
