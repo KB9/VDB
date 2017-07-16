@@ -31,6 +31,9 @@ CodeEditor::CodeEditor(QString filepath, std::shared_ptr<VDB> vdb, QWidget *pare
     font.setPointSize(12);
     this->setFont(font);
 
+    // Disable line wrapping
+    setLineWrapMode(NoWrap);
+
     // Set the tab width
     const int tab_stop = 4;
     QFontMetrics metrics(font);
