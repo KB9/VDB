@@ -51,6 +51,23 @@ void MainWindow::pollDebugEngine()
             // Enable breakpoint controls so that breakpoint action can be taken
             ui->debugButton->setEnabled(true);
             setBreakpointStepControlsEnabled(true);
+
+            // TODO: Should open source file if not already open in editor
+            QString filename = QString::fromStdString(bph_msg->file_name);
+            for (int i = 0; i < ui->fileTabWidget->count(); i++)
+            {
+                // TODO: This is a really poor test for a matching source files.
+                // Will need to change this once file tree setup is improved.
+                QString tab_text = ui->fileTabWidget->tabText(i);
+                if (filename.contains(tab_text))
+                {
+                    CodeEditor *editor = dynamic_cast<CodeEditor *>(ui->fileTabWidget->widget(i));
+                    if (editor != nullptr)
+                    {
+                        editor->goToLine(bph_msg->line_number);
+                    }
+                }
+            }
         }
 
         TargetExitMessage *exit_msg = dynamic_cast<TargetExitMessage *>(msg.get());

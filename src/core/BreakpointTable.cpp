@@ -36,8 +36,11 @@ bool BreakpointTable::addBreakpoint(const char *source_file,
 		    line.number == line_number &&
 		    breakpoints_by_address.find(line.address) == breakpoints_by_address.end())
 		{
+			Breakpoint breakpoint((void *)line.address, line.number, source_file);
+			std::pair<uint64_t, Breakpoint> entry(line.address, breakpoint);
+			breakpoints_by_address.insert(entry);
+
 			mtx.unlock();
-			addBreakpoint(line.address);
 			return true;
 		}
 	}
@@ -55,8 +58,9 @@ bool BreakpointTable::removeBreakpoint(const char *source_file,
 		    line.number == line_number &&
 		    breakpoints_by_address.find(line.address) != breakpoints_by_address.end())
 		{
+			breakpoints_by_address.erase(line.address);
+
 			mtx.unlock();
-			removeBreakpoint(line.address);
 			return true;
 		}
 	}

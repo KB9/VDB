@@ -290,3 +290,10 @@ void CodeEditor::createParenthesisSelection(int pos, QList<QTextEdit::ExtraSelec
 
     selections.append(selection);
 }
+
+void CodeEditor::goToLine(unsigned int line_number)
+{
+    QTextDocument *document = this->document();
+    QTextCursor cursor(document->findBlockByLineNumber(line_number - 1));
+    this->setTextCursor(cursor);
+}

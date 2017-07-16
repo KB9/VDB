@@ -26,6 +26,8 @@ public:
     // Returns the line number from a given y-position
     unsigned int getLineNumberFromY(int y);
 
+    void goToLine(unsigned int line_number);
+
 protected:
     void resizeEvent(QResizeEvent *event) override;
 

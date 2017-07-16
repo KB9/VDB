@@ -15,6 +15,7 @@
 #include <errno.h>
 
 #include <stdint.h>
+#include <string>
 
 class Breakpoint
 {
@@ -23,11 +24,13 @@ public:
 
 	void *addr;
 	uint64_t orig_data;
+	uint64_t line_number;
+	std::string file_name;
 
 	void enable(pid_t pid);
 	void disable(pid_t pid);
 	bool stepOver(pid_t pid);
 
 private:
-	Breakpoint(void *addr);
+	Breakpoint(void *addr, uint64_t line_number = 0, std::string file_name = "");
 };

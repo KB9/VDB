@@ -4,9 +4,11 @@
 void procmsg(const char *format, ...);
 unsigned getChildInstructionPointer(pid_t child_pid);
 
-Breakpoint::Breakpoint(void *addr)
+Breakpoint::Breakpoint(void *addr, uint64_t line_number, std::string file_name)
 {
 	this->addr = addr;
+	this->line_number = line_number;
+	this->file_name = file_name;
 
 	procmsg("Breakpoint created: 0x%08x\n", addr);
 }

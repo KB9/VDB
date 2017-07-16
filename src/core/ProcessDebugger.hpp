@@ -16,6 +16,7 @@
 #include "ThreadSafeQueue.hpp"
 
 #include <memory>
+#include <string>
 
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
@@ -38,7 +39,13 @@ public:
 };
 
 class TargetExitMessage : public DebugMessage {};
-class BreakpointHitMessage : public DebugMessage {};
+
+class BreakpointHitMessage : public DebugMessage
+{
+public:
+	uint64_t line_number;
+	std::string file_name;
+};
 
 // This class is responsible for forking the process and forming the target and
 // debugging process. When running the target process, this class will be

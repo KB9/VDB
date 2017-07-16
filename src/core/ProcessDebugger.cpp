@@ -179,7 +179,10 @@ void ProcessDebugger::onBreakpointHit()
 	procmsg("[BREAKPOINT_ACTION] Waiting for breakpoint action...\n");
 
 	// Notify the frontend that a breakpoint has been hit
-	message_queue_out.push(std::make_unique<BreakpointHitMessage>());
+	auto bph_msg = std::make_unique<BreakpointHitMessage>();
+	bph_msg->line_number = breakpoint->line_number;
+	bph_msg->file_name = breakpoint->file_name;
+	message_queue_out.push(std::move(bph_msg));
 
 	// Wait until an action is taken for this particular breakpoint
 	std::unique_lock<std::mutex> lck(mtx);
