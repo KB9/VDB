@@ -28,7 +28,6 @@ public:
 	void disableBreakpoints(pid_t target_pid);
 
 private:
-	pid_t target_pid;
 	std::shared_ptr<DwarfDebug> dwarf = nullptr;
 
 	std::mutex mtx;

@@ -26,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(timer, SIGNAL(timeout()), this, SLOT(pollDebugEngine()));
 
     // Disable the breakpoint step controls until a breakpoint is hit
+    setDebugButtonEnabled(false);
     setBreakpointStepControlsEnabled(false);
 }
 
@@ -49,7 +50,7 @@ void MainWindow::pollDebugEngine()
         if (bph_msg != nullptr)
         {
             // Enable breakpoint controls so that breakpoint action can be taken
-            ui->debugButton->setEnabled(true);
+            setDebugButtonEnabled(true);
             setBreakpointStepControlsEnabled(true);
 
             // TODO: Should open source file if not already open in editor
@@ -74,8 +75,7 @@ void MainWindow::pollDebugEngine()
         if (exit_msg != nullptr)
         {
             // Reset breakpoint control buttons to their default state
-            ui->debugButton->setText("Start Debugging");
-            ui->debugButton->setEnabled(true);
+            setDebugButtonEnabled(true, "Start Debugging");
             setBreakpointStepControlsEnabled(false);
         }
     }
@@ -117,6 +117,9 @@ void MainWindow::importExecutable()
             dir_item->addChild(file_item);
         }
     }
+
+    // Enable the debugging button once the executable's source is loaded
+    setDebugButtonEnabled(true);
 }
 
 void MainWindow::startDebugging()
@@ -131,15 +134,14 @@ void MainWindow::startDebugging()
         timer->start(500);
 
         // Disable breakpoint controls until a breakpoint is hit
-        ui->debugButton->setText("Continue");
-        ui->debugButton->setEnabled(false);
+        setDebugButtonEnabled(false, "Continue");
         setBreakpointStepControlsEnabled(false);
     }
     else
     {
         // Continue execution, disable breakpoint controls until another is hit
         vdb->getDebugEngine()->continueExecution();
-        ui->debugButton->setEnabled(false);
+        setDebugButtonEnabled(false);
         setBreakpointStepControlsEnabled(false);
     }
 }
@@ -191,6 +193,12 @@ void MainWindow::onFileSelected(QTreeWidgetItem *item, int column)
 
     // Add a new code editor tab
     ui->fileTabWidget->addTab(new CodeEditor(absolute_path, lines, vdb), filename);
+}
+
+void MainWindow::setDebugButtonEnabled(bool enabled, QString text)
+{
+    ui->debugButton->setEnabled(enabled);
+    if (!text.isEmpty()) ui->debugButton->setText(text);
 }
 
 void MainWindow::setBreakpointStepControlsEnabled(bool enabled)

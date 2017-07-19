@@ -34,6 +34,7 @@ private slots:
     void onFileSelected(QTreeWidgetItem *item, int column);
 
 private:
+    void setDebugButtonEnabled(bool enabled, QString text = 0);
     void setBreakpointStepControlsEnabled(bool enabled);
 
     Ui::MainWindow *ui;

@@ -11,7 +11,10 @@
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
-// Contains all of the tools needed to debug a process
+// Contains all of the tools needed to debug a process.
+// Contains resources which can be used both in and outside of the debugging
+// of a target process, such as setting breakpoints in preparation for
+// debugging to begin.
 class DebugEngine
 {
 public:
