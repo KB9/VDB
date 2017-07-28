@@ -4,6 +4,8 @@
 #include "ValueDeducer.hpp"
 #include "dwarf/DIEVariable.hpp"
 
+#include "Unwinder.hpp"
+
 #include <cstring>
 
 ProcessDebugger::ProcessDebugger(char *executable_name,
@@ -28,7 +30,7 @@ ProcessDebugger::~ProcessDebugger()
 
 	// Set the variables which will allow the debug thread to terminate
 	is_debugging = false;
-	breakpoint_action = STEP_OVER;
+	breakpoint_action = CONTINUE;
 	cv.notify_all();
 	debug_thread.join();
 }
@@ -47,6 +49,12 @@ std::unique_ptr<DebugMessage> ProcessDebugger::tryPoll()
 void ProcessDebugger::stepOver()
 {
 	breakpoint_action = STEP_OVER;
+	cv.notify_all();
+}
+
+void ProcessDebugger::stepInto()
+{
+	breakpoint_action = STEP_INTO;
 	cv.notify_all();
 }
 
@@ -146,7 +154,39 @@ bool ProcessDebugger::runDebugger()
 			}
 			else
 			{
-				procmsg("[DEBUG] Child process stopped - unknown signal! (%d)\n", last_sig);
+				//procmsg("[DEBUG] Child process stopped - unknown signal! (%d)\n", last_sig);
+				procmsg("[DEBUG] Child process stopped: ");
+				switch (last_sig)
+				{
+					case SIGABRT: procmsg("Process abort (SIGABRT)\n"); break;
+					case SIGALRM: procmsg("Alarm clock (SIGALRM)\n"); break;
+					case SIGFPE: procmsg("Erroneous arithmetic operation (SIGFPE)\n"); break;
+					case SIGHUP: procmsg("Hangup (SIGHUP)\n"); break;
+					case SIGILL: procmsg("Illegal instruction (SIGILL)\n"); break;
+					case SIGINT: procmsg("Terminal interrupt signal (SIGINT)\n"); break;
+					case SIGKILL: procmsg("Kill (SIGKILL)\n"); break;
+					case SIGPIPE: procmsg("Write on a pipe with no one to read it (SIGPIPE)\n"); break;
+					case SIGQUIT: procmsg("Terminal quit signal (SIGQUIT)\n"); break;
+					case SIGSEGV: procmsg("Invalid memory reference (SIGSEGV)\n"); break;
+					case SIGTERM: procmsg("Termination signal (SIGTERM)\n"); break;
+					case SIGUSR1: procmsg("User-defined signal 1 (SIGUSR1)\n"); break;
+					case SIGUSR2: procmsg("User-defined signal 2 (SIGUSR2)\n"); break;
+					case SIGCHLD: procmsg("Child process terminated or stopped (SIGCHLD)\n"); break;
+					case SIGCONT: procmsg("Continue executing, if stopped (SIGCONT)\n"); break;
+					case SIGSTOP: procmsg("Stop executing (SIGSTOP)\n"); break;
+					case SIGTSTP: procmsg("Terminal stop signal (SIGTSTP)\n"); break;
+					case SIGTTIN: procmsg("Background process attempting read (SIGTTIN)\n"); break;
+					case SIGTTOU: procmsg("Background process attempting write (SIGTTOU)\n"); break;
+					case SIGBUS: procmsg("Access to an undefined portion of a memory object (SIGBUS)\n"); break;
+					case SIGPOLL: procmsg("Pollable event (SIGPOLL)\n"); break;
+					case SIGPROF: procmsg("Profiling timer expired (SIGPROF)\n"); break;
+					case SIGSYS: procmsg("Bad system call (SIGSYS)\n"); break;
+					case SIGURG: procmsg("High bandwidth data is available at a socket (SIGURG)\n"); break;
+					case SIGVTALRM: procmsg("Virtual timer expired (SIGVTALRM)\n"); break;
+					case SIGXCPU: procmsg("CPU time limit exceeded (SIGXCPU)\n"); break;
+					case SIGXFSZ: procmsg("File size limit exceeded (SIGXFSZ)\n"); break;
+					default: procmsg("UNKNOWN\n");
+				}
 
 				// TODO: Check for other signal types
 				// TODO: Continue debugging instead of exiting debug loop
@@ -186,8 +226,9 @@ void ProcessDebugger::onBreakpointHit()
 
 	// Wait until an action is taken for this particular breakpoint
 	std::unique_lock<std::mutex> lck(mtx);
-	while (breakpoint_action == UNDEFINED)
+	while (breakpoint_action != CONTINUE)
 	{
+		// Process the incoming message queue
 		while (!message_queue_in.empty())
 		{
 			std::unique_ptr<DebugMessage> msg = message_queue_in.tryPop();
@@ -200,43 +241,60 @@ void ProcessDebugger::onBreakpointHit()
 			message_queue_out.push(std::move(msg));
 		}
 
+		// Perform any stepping actions required
+		if (breakpoint_action == STEP_OVER || breakpoint_action == STEP_INTO)
+		{
+			// Initialize the step cursor if it hasn't already been initialized
+			if (step_cursor == nullptr)
+				step_cursor = std::make_unique<StepCursor>(breakpoint_address,
+				                                           debug_data,
+				                                           breakpoint_table);
+
+			// Perform the step action
+			switch (breakpoint_action)
+			{
+				case STEP_OVER:
+				{
+					step_cursor->stepOver(target_pid);
+					break;
+				}
+				case STEP_INTO:
+				{
+					step_cursor->stepInto(target_pid);
+					break;
+				}
+				default:
+					break;
+			}
+
+			// Report to the frontend message receiver
+			auto step_msg = std::make_unique<StepMessage>();
+			step_msg->line_number = step_cursor->getCurrentLineNumber();
+			step_msg->file_name = step_cursor->getCurrentSourceFile();
+			message_queue_out.push(std::move(step_msg));
+		}
+
+		// Reset the breakpoint action
+		breakpoint_action = UNDEFINED;
+
+		// Wait until notified
 		cv.wait(lck);
 	}
 
-	// DEBUG: Output the action being performed at this breakpoint
-	switch (breakpoint_action)
+	// The continue breakpoint action has been selected at this point
+
+	// If the step cursor hasn't been initialized, it was never used therefore
+	// we are still on the same breakpoint that it originally stopped on.
+	if (step_cursor == nullptr)
 	{
-		case STEP_OVER:
-			procmsg("[BREAKPOINT_ACTION] Step over\n");
-			break;
-		case CONTINUE:
-			procmsg("[BREAKPOINT_ACTION] Continue\n");
-			break;
-		default:
-			break;
+		breakpoint->stepOver(target_pid);
 	}
-
-	// Carry out the action specified for this breakpoint
-	switch (breakpoint_action)
+	else
 	{
-		case STEP_OVER:
-		{
-			// TODO: This needs to set a breakpoint on the next line after
-			// the line this breakpoint is on.
-			breakpoint->stepOver(target_pid);
-			break;
-		}
-
-		case CONTINUE:
-		{
-			breakpoint->stepOver(target_pid);
-			break;
-		}
-
-		default:
-		{
-			break;
-		}
+		// TODO: Need to step over a breakpoint if it stopped on one, otherwise
+		// continuing from a breakpoint line will simply stop on the same line.
+		// However, the next continue action will behave appropriately.
+		step_cursor = nullptr;
 	}
 
 	// Reset the breakpoint action

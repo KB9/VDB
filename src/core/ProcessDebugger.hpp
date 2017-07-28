@@ -18,6 +18,8 @@
 #include <memory>
 #include <string>
 
+#include "StepCursor.hpp"
+
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
@@ -28,6 +30,7 @@ enum BreakpointAction
 {
 	UNDEFINED,
 	STEP_OVER,
+	STEP_INTO,
 	CONTINUE
 };
 
@@ -41,6 +44,13 @@ public:
 class TargetExitMessage : public DebugMessage {};
 
 class BreakpointHitMessage : public DebugMessage
+{
+public:
+	uint64_t line_number;
+	std::string file_name;
+};
+
+class StepMessage : public DebugMessage
 {
 public:
 	uint64_t line_number;
@@ -62,6 +72,7 @@ public:
 
 	void continueExecution();
 	void stepOver();
+	void stepInto();
 
 	void enqueue(std::unique_ptr<DebugMessage> msg);
 	std::unique_ptr<DebugMessage> tryPoll();
@@ -100,4 +111,6 @@ private:
 	void onBreakpointHit();
 
 	void deduceValue(GetValueMessage *value_msg);
+
+	std::unique_ptr<StepCursor> step_cursor = nullptr;
 };

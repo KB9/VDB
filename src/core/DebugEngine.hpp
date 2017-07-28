@@ -26,6 +26,7 @@ public:
 	std::shared_ptr<BreakpointTable> getBreakpoints();
 
 	void stepOver();
+	void stepInto();
 	void continueExecution();
 
 	void sendMessage(std::unique_ptr<DebugMessage> msg);
