@@ -46,3 +46,8 @@ std::shared_ptr<DebugLine> DwarfDebug::line()
 {
 	return debug_line;
 }
+
+std::shared_ptr<DebugAddressRanges> DwarfDebug::aranges()
+{
+	return debug_aranges;
+}
