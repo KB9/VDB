@@ -15,6 +15,7 @@ CPPFILES = 	Breakpoint.cpp \
 			dwarf/DwarfDebug.cpp \
 			dwarf/DwarfExprInterpreter.cpp \
 			ValueDeducer.cpp \
+			StepCursor.cpp \
 			ProcessDebugger.cpp \
 			DebugEngine.cpp \
 			vdb.cpp
