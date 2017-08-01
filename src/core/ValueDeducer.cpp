@@ -64,7 +64,7 @@ std::string ValueDeducer::deduce(uint64_t address, const DIEBaseType &base_die)
 	case DW_ATE_signed_char:
 	{
 		char value = (char)data;
-		return std::to_string(value);
+		return std::string(1, value);
 	}
 
 	case DW_ATE_unsigned:
