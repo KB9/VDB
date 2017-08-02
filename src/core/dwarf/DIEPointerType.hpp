@@ -1,3 +1,5 @@
+#pragma once
+
 #include "DebuggingInformationEntry.hpp"
 
 class DIEPointerType : public DebuggingInformationEntry

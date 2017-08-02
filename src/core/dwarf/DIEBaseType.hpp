@@ -1,3 +1,5 @@
+#pragma once
+
 #include "DebuggingInformationEntry.hpp"
 
 #include <dwarf.h>
