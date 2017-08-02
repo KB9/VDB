@@ -8,6 +8,8 @@ CPPFILES = 	Breakpoint.cpp \
 			dwarf/DIESubprogram.cpp \
 			dwarf/DIEFormalParameter.cpp \
 			dwarf/DIEVariable.cpp \
+			dwarf/DIEArrayType.cpp \
+			dwarf/DIESubrangeType.cpp \
 			dwarf/CUHeader.cpp \
 			dwarf/DebugInfo.cpp \
 			dwarf/DebugLine.cpp \
