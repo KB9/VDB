@@ -2,6 +2,8 @@
 
 #include <sys/ptrace.h>
 
+#include "dwarf/DIESubrangeType.hpp"
+
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
@@ -133,4 +135,38 @@ std::string ValueDeducer::deduce(uint64_t address, const DIEPointerType &pointer
 	}
 
 	return "Error deducing type pointed to";
+}
+
+std::string ValueDeducer::deduce(uint64_t address, DIEArrayType &array_die)
+{
+	// Get the type of the array
+	std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(array_die.getTypeOffset());
+	if (die == nullptr) return "Error getting array type";
+	DIEBaseType *array_base_type_die = dynamic_cast<DIEBaseType *>(die.get());
+
+	// Find the subrange child DIE to determine the upper bound of the array
+	uint64_t upper_bound = 0;
+	auto child_ptrs = array_die.getChildren();
+	for (auto child_ptr : child_ptrs)
+	{
+		if (child_ptr->getTagName() == "DW_TAG_subrange_type")
+		{
+			auto child = dynamic_cast<DIESubrangeType *>(child_ptr.get());
+			upper_bound = child->getUpperBound();
+			break;
+		}
+	}
+
+	// Deduce the values of the array's elements
+	std::string array_string = "{";
+	uint64_t array_type_size = array_base_type_die->getByteSize();
+	uint64_t array_size = array_type_size * (upper_bound + 1);
+	for (uint64_t i = 0; i < array_size; i += array_type_size)
+	{
+		// Deduce the array values and add them to the string
+		array_string += deduce(address + i, *array_base_type_die);
+		if (i < (array_size - array_type_size)) array_string += ",";
+	}
+	array_string += "}";
+	return array_string;
 }

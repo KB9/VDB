@@ -355,4 +355,14 @@ void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 		value_msg->value = new char[value.length() + 1];
 		strcpy(value_msg->value, ((char *)value.c_str()));
 	}
+
+	DIEArrayType *array_type_die = dynamic_cast<DIEArrayType *>(type_die);
+	if (array_type_die != nullptr)
+	{
+		// Deduce the value as an array type
+		value = deducer.deduce(address, *array_type_die);
+		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
+		value_msg->value = new char[value.length() + 1];
+		strcpy(value_msg->value, ((char *)value.c_str()));
+	}
 }
