@@ -8,26 +8,19 @@
 
 #include <cstring>
 
-ProcessDebugger::ProcessDebugger(char *executable_name,
+ProcessDebugger::ProcessDebugger(const std::string& executable_name,
                                  std::shared_ptr<BreakpointTable> breakpoint_table,
-                                 std::shared_ptr<DwarfDebug> debug_data)
+                                 std::shared_ptr<DwarfDebug> debug_data) :
+	debug_data(debug_data),
+	target_name(executable_name),
+	breakpoint_table(breakpoint_table)
 {
-	if (target_name != NULL) delete target_name;
-	target_name = new char[strlen(executable_name) + 1];
-	strcpy(target_name, executable_name);
-
-	this->breakpoint_table = breakpoint_table;
-	this->debug_data = debug_data;
-
 	is_debugging = true;
 	debug_thread = std::thread(&ProcessDebugger::threadedDebug, this);
 }
 
 ProcessDebugger::~ProcessDebugger()
 {
-	if (target_name != NULL) delete target_name;
-	target_name = NULL;
-
 	// Set the variables which will allow the debug thread to terminate
 	is_debugging = false;
 	breakpoint_action = CONTINUE;
@@ -94,7 +87,7 @@ bool ProcessDebugger::threadedDebug()
 
 bool ProcessDebugger::runTarget()
 {
-	procmsg("Target started. Will run '%s'\n", target_name);
+	procmsg("Target started. Will run '%s'\n", target_name.c_str());
 
 	// Allow tracing of this process
 	if (ptrace(PTRACE_TRACEME, 0, 0, 0) < 0)
@@ -104,7 +97,7 @@ bool ProcessDebugger::runTarget()
 	}
 
 	// Replace this process's image with the given program
-	execl(target_name, target_name, 0);
+	execl(target_name.c_str(), target_name.c_str(), 0);
 
 	return false;
 }

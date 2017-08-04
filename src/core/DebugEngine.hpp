@@ -5,6 +5,7 @@
 #include "ProcessDebugger.hpp"
 
 #include <memory>
+#include <string>
 
 #include "ProcessDebugger.hpp"
 
@@ -18,7 +19,7 @@ void procmsg(const char* format, ...);
 class DebugEngine
 {
 public:
-	DebugEngine(const char *executable_name, std::shared_ptr<DwarfDebug> debug_data);
+	DebugEngine(const std::string& executable_name, std::shared_ptr<DwarfDebug> debug_data);
 	~DebugEngine();
 
 	bool run();
@@ -35,7 +36,7 @@ public:
 	bool isDebugging();
 
 private:
-	char *target_name = NULL;
+	std::string target_name;
 
 	std::shared_ptr<ProcessDebugger> debugger = nullptr;
 	std::shared_ptr<DwarfDebug> debug_data = nullptr;

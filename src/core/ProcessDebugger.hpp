@@ -65,9 +65,9 @@ class ProcessDebugger
 {
 public:
 
-	ProcessDebugger(char *executable_name,
-					std::shared_ptr<BreakpointTable> breakpoint_table,
-					std::shared_ptr<DwarfDebug> debug_data);
+	ProcessDebugger(const std::string& executable_name,
+	                std::shared_ptr<BreakpointTable> breakpoint_table,
+	                std::shared_ptr<DwarfDebug> debug_data);
 	~ProcessDebugger();
 
 	void continueExecution();
@@ -82,7 +82,7 @@ public:
 private:
 	std::shared_ptr<DwarfDebug> debug_data = nullptr;
 
-	char *target_name = NULL;
+	std::string target_name;
 	pid_t target_pid;
 
 	std::shared_ptr<BreakpointTable> breakpoint_table = nullptr;
