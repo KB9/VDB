@@ -37,8 +37,8 @@ enum BreakpointAction
 class GetValueMessage : public DebugMessage
 {
 public:
-	char *variable_name;
-	char *value;
+	std::string variable_name;
+	std::string value;
 };
 
 class TargetExitMessage : public DebugMessage {};

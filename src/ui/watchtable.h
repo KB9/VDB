@@ -14,7 +14,8 @@ public:
 
     void setDebugEngine(DebugEngine *debug_engine);
 
-    void onValueDeduced(char *variable_name, char *value);
+    void onValueDeduced(const std::string& variable_name,
+                        const std::string& value);
 
 private slots:
     void onWatchVarChanged(int row, int column);

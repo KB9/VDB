@@ -301,7 +301,7 @@ void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 	bool found = false;
 	for (CUHeader header : debug_data->info()->getCUHeaders())
 	{
-		auto loc_exprs = header.getLocExprsFromVarName<DIEVariable>(value_msg->variable_name);
+		auto loc_exprs = header.getLocExprsFromVarName<DIEVariable>(value_msg->variable_name.c_str());
 		if (loc_exprs.size() > 0)
 		{
 			loc_expr = loc_exprs.at(0);
@@ -335,8 +335,7 @@ void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 		// Deduce the value as a base type
 		value = deducer.deduce(address, *base_type_die);
 		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
-        value_msg->value = new char[value.length() + 1];
-		strcpy(value_msg->value, ((char *)value.c_str()));
+		value_msg->value = value;
 	}
 
 	DIEPointerType *pointer_type_die = dynamic_cast<DIEPointerType *>(type_die);
@@ -345,8 +344,7 @@ void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 		// Deduce the value as a pointer type
 		value = deducer.deduce(address, *pointer_type_die);
 		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
-		value_msg->value = new char[value.length() + 1];
-		strcpy(value_msg->value, ((char *)value.c_str()));
+		value_msg->value = value;
 	}
 
 	DIEArrayType *array_type_die = dynamic_cast<DIEArrayType *>(type_die);
@@ -355,7 +353,6 @@ void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 		// Deduce the value as an array type
 		value = deducer.deduce(address, *array_type_die);
 		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
-		value_msg->value = new char[value.length() + 1];
-		strcpy(value_msg->value, ((char *)value.c_str()));
+		value_msg->value = value;
 	}
 }

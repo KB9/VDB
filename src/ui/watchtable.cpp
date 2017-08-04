@@ -34,9 +34,7 @@ void WatchTable::onWatchVarChanged(int row, int column)
     {
         // Generate a GetValueMessage and wait for the result via polling
         std::unique_ptr<GetValueMessage> msg = std::unique_ptr<GetValueMessage>(new GetValueMessage());
-        msg->variable_name = new char[item->text().toStdString().length()+1];
-        strcpy(msg->variable_name, item->text().toStdString().c_str());
-        msg->value = nullptr;
+        msg->variable_name = item->text().toStdString();
         debug_engine->sendMessage(std::move(msg));
 
         addWatchRow();
@@ -54,15 +52,16 @@ void WatchTable::addWatchRow()
     setItem(row, 1, item);
 }
 
-void WatchTable::onValueDeduced(char *variable_name, char *value)
+void WatchTable::onValueDeduced(const std::string& variable_name,
+                                const std::string& value)
 {
     for (int i = 0; i < rowCount() - 1; i++)
     {
-        const char *cell_text = item(i, 0)->text().toStdString().c_str();
-        if (strcmp(cell_text, variable_name) == 0)
+        std::string cell_text = item(i, 0)->text().toStdString();
+        if (cell_text == variable_name)
         {
             QTableWidgetItem *item = new QTableWidgetItem();
-            item->setText(QString::fromLocal8Bit(value));
+            item->setText(QString::fromStdString(value));
             item->setFlags(item->flags() & ~Qt::ItemIsEditable);
             setItem(i, 1, item);
         }
