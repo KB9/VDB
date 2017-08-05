@@ -10,6 +10,7 @@ CPPFILES = 	Breakpoint.cpp \
 			dwarf/DIEVariable.cpp \
 			dwarf/DIEArrayType.cpp \
 			dwarf/DIESubrangeType.cpp \
+			dwarf/DIEStructureType.cpp \
 			dwarf/CUHeader.cpp \
 			dwarf/DebugInfo.cpp \
 			dwarf/DebugLine.cpp \
