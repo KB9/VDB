@@ -6,6 +6,7 @@
 #include "dwarf/DIEPointerType.hpp"
 #include "dwarf/DIEArrayType.hpp"
 #include "dwarf/DIEStructureType.hpp"
+#include "dwarf/DIEClassType.hpp"
 #include "dwarf/DwarfDebug.hpp"
 
 class ValueDeducer
@@ -23,4 +24,5 @@ private:
 	std::string deducePointer(uint64_t address, const DIEPointerType &pointer_die);
 	std::string deduceArray(uint64_t address, DIEArrayType &array_die);
 	std::string deduceStructure(uint64_t address, DIEStructureType &struct_die);
+	std::string deduceClass(uint64_t address, DIEClassType &class_die);
 };

@@ -38,6 +38,11 @@ std::string ValueDeducer::deduce(uint64_t address, DebuggingInformationEntry &ty
 		DIEStructureType *die_struct_type = dynamic_cast<DIEStructureType *>(&type_die);
 		return deduceStructure(address, *die_struct_type);
 	}
+	else if (type_die.getTagName() == "DW_TAG_class_type")
+	{
+		DIEClassType *die_class_type = dynamic_cast<DIEClassType *>(&type_die);
+		return deduceClass(address, *die_class_type);
+	}
 	else
 	{
 		return "Type cannot be deduced";
@@ -206,6 +211,37 @@ std::string ValueDeducer::deduceStructure(uint64_t address, DIEStructureType &st
 	// Get the values of all the member variables
 	uint64_t counter = 0;
 	auto child_ptrs = struct_die.getChildren();
+	for (auto child_ptr : child_ptrs)
+	{
+		if (child_ptr->getTagName() == "DW_TAG_member")
+		{
+			// Add a comma before adding the next member variable
+			if (counter++ > 0) values += ", ";
+
+			// Get the member variable DIE, its base type and its address
+			auto member = dynamic_cast<DIEMemberType *>(child_ptr.get());
+			auto member_type_die = debug_data->info()->getDIEByOffset(member->getTypeOffset());
+			uint64_t member_address = address + member->getDataMemberLocation();
+
+			// Append member variable name and value to the return string
+			values += member->getName();
+			values += "=";
+			values += deduce(member_address, *member_type_die);
+		}
+	}
+
+	values += "}";
+
+	return values;
+}
+
+std::string ValueDeducer::deduceClass(uint64_t address, DIEClassType &class_die)
+{
+	std::string values = "{";
+
+	// Get the values of all the member variables
+	uint64_t counter = 0;
+	auto child_ptrs = class_die.getChildren();
 	for (auto child_ptr : child_ptrs)
 	{
 		if (child_ptr->getTagName() == "DW_TAG_member")
