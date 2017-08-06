@@ -10,6 +10,7 @@
 #include "DIESubrangeType.hpp"
 #include "DIEStructureType.hpp"
 #include "DIEMemberType.hpp"
+#include "DIEClassType.hpp"
 
 #include <cstring>
 
@@ -109,6 +110,8 @@ void DebuggingInformationEntry::addChildDie(const Dwarf_Die &child_die)
 		obj = std::make_shared<DIEStructureType>(dbg, child_die, this);
 	else if (tag_name == "DW_TAG_member")
 		obj = std::make_shared<DIEMemberType>(dbg, child_die, this);
+	else if (tag_name == "DW_TAG_class_type")
+		obj = std::make_shared<DIEClassType>(dbg, child_die, this);
 	else
 	{
 		procmsg("[DWARF] [%s] Ignoring child DIE type: %s\n", getTagName().c_str(), getDieTagName(child_die).c_str());
