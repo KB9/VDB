@@ -5,6 +5,7 @@
 #include "dwarf/DIEBaseType.hpp"
 #include "dwarf/DIEPointerType.hpp"
 #include "dwarf/DIEArrayType.hpp"
+#include "dwarf/DIEStructureType.hpp"
 #include "dwarf/DwarfDebug.hpp"
 
 class ValueDeducer
@@ -15,6 +16,7 @@ public:
 	std::string deduce(uint64_t address, const DIEBaseType &base_die);
 	std::string deduce(uint64_t address, const DIEPointerType &pointer_die);
 	std::string deduce(uint64_t address, DIEArrayType &array_die);
+	std::string deduce(uint64_t address, DIEStructureType &struct_die);
 
 private:
 	pid_t target_pid;

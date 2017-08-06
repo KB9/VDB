@@ -355,4 +355,13 @@ void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
 		value_msg->value = value;
 	}
+
+	DIEStructureType *struct_type_die = dynamic_cast<DIEStructureType *>(type_die);
+	if (struct_type_die != nullptr)
+	{
+		// Deduce the value as a struct type
+		value = deducer.deduce(address, *struct_type_die);
+		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
+		value_msg->value = value;
+	}
 }

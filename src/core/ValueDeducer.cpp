@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "dwarf/DIESubrangeType.hpp"
+#include "dwarf/DIEMemberType.hpp"
 
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
@@ -179,4 +180,48 @@ std::string ValueDeducer::deduce(uint64_t address, DIEArrayType &array_die)
 	}
 	array_string += "}";
 	return array_string;
+}
+
+std::string ValueDeducer::deduce(uint64_t address, DIEStructureType &struct_die)
+{
+	std::string values = "{";
+
+	// Get the values of all the member variables
+	uint64_t counter = 0;
+	auto child_ptrs = struct_die.getChildren();
+	for (auto child_ptr : child_ptrs)
+	{
+		if (child_ptr->getTagName() == "DW_TAG_member")
+		{
+			// Add a comma before adding the next member variable
+			if (counter++ > 0) values += ", ";
+
+			// Get the member variable DIE, its base type and its address
+			auto member = dynamic_cast<DIEMemberType *>(child_ptr.get());
+			auto member_type_die = debug_data->info()->getDIEByOffset(member->getTypeOffset());
+			uint64_t member_address = address + member->getDataMemberLocation();
+
+			// Append member variable name to the return string
+			values += member->getName();
+			values += "=";
+
+			// Get the appropriate variable type to deduce the value and append
+			// to return string
+			DIEBaseType *base_type_die = dynamic_cast<DIEBaseType *>(member_type_die.get());
+			if (base_type_die != nullptr)
+				values += deduce(member_address, *base_type_die);
+
+			DIEArrayType *array_type_die = dynamic_cast<DIEArrayType *>(member_type_die.get());
+			if (array_type_die != nullptr)
+				values += deduce(member_address, *array_type_die);
+
+			DIEStructureType *struct_type_die = dynamic_cast<DIEStructureType *>(member_type_die.get());
+			if (struct_type_die != nullptr)
+				values += deduce(member_address, *struct_type_die);
+		}
+	}
+
+	values += "}";
+
+	return values;
 }
