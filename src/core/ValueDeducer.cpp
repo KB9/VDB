@@ -16,7 +16,35 @@ ValueDeducer::ValueDeducer(pid_t target_pid, std::shared_ptr<DwarfDebug> debug_d
 	this->debug_data = debug_data;
 }
 
-std::string ValueDeducer::deduce(uint64_t address, const DIEBaseType &base_die)
+std::string ValueDeducer::deduce(uint64_t address, DebuggingInformationEntry &type_die)
+{
+	if (type_die.getTagName() == "DW_TAG_base_type")
+	{
+		DIEBaseType *die_base_type = dynamic_cast<DIEBaseType *>(&type_die);
+		return deduceBase(address, *die_base_type);
+	}
+	else if (type_die.getTagName() == "DW_TAG_pointer_type")
+	{
+		DIEPointerType *die_ptr_type = dynamic_cast<DIEPointerType *>(&type_die);
+		return deducePointer(address, *die_ptr_type);
+	}
+	else if (type_die.getTagName() == "DW_TAG_array_type")
+	{
+		DIEArrayType *die_array_type = dynamic_cast<DIEArrayType *>(&type_die);
+		return deduceArray(address, *die_array_type);
+	}
+	else if (type_die.getTagName() == "DW_TAG_structure_type")
+	{
+		DIEStructureType *die_struct_type = dynamic_cast<DIEStructureType *>(&type_die);
+		return deduceStructure(address, *die_struct_type);
+	}
+	else
+	{
+		return "Type cannot be deduced";
+	}
+}
+
+std::string ValueDeducer::deduceBase(uint64_t address, const DIEBaseType &base_die)
 {
 	// Get the data at the specified target process address
 	uint64_t data = ptrace(PTRACE_PEEKDATA, target_pid, address, 0);
@@ -126,29 +154,16 @@ std::string ValueDeducer::deduce(uint64_t address, const DIEBaseType &base_die)
 	return "";
 }
 
-std::string ValueDeducer::deduce(uint64_t address, const DIEPointerType &pointer_die)
+std::string ValueDeducer::deducePointer(uint64_t address, const DIEPointerType &pointer_die)
 {
 	std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(pointer_die.type_offset);
 	if (die == nullptr) return "Error retrieving type pointed to";
 
 	uint64_t new_address = ptrace(PTRACE_PEEKDATA, target_pid, address, 0);
-
-	DIEPointerType *recurring_pointer_die = dynamic_cast<DIEPointerType *>(die.get());
-	if (recurring_pointer_die != nullptr)
-	{
-		return deduce(new_address, *recurring_pointer_die);
-	}
-
-	DIEBaseType *base_die = dynamic_cast<DIEBaseType *>(die.get());
-	if (base_die != nullptr)
-	{
-		return deduce(new_address, *base_die);
-	}
-
-	return "Error deducing type pointed to";
+	return deduce(new_address, *die);
 }
 
-std::string ValueDeducer::deduce(uint64_t address, DIEArrayType &array_die)
+std::string ValueDeducer::deduceArray(uint64_t address, DIEArrayType &array_die)
 {
 	// Get the type of the array
 	std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(array_die.getTypeOffset());
@@ -174,15 +189,17 @@ std::string ValueDeducer::deduce(uint64_t address, DIEArrayType &array_die)
 	uint64_t array_size = array_type_size * (upper_bound + 1);
 	for (uint64_t i = 0; i < array_size; i += array_type_size)
 	{
+		// Add a comma before adding the next value
+		if (i > 0) array_string += ", ";
+
 		// Deduce the array values and add them to the string
 		array_string += deduce(address + i, *array_base_type_die);
-		if (i < (array_size - array_type_size)) array_string += ",";
 	}
 	array_string += "}";
 	return array_string;
 }
 
-std::string ValueDeducer::deduce(uint64_t address, DIEStructureType &struct_die)
+std::string ValueDeducer::deduceStructure(uint64_t address, DIEStructureType &struct_die)
 {
 	std::string values = "{";
 
@@ -201,23 +218,10 @@ std::string ValueDeducer::deduce(uint64_t address, DIEStructureType &struct_die)
 			auto member_type_die = debug_data->info()->getDIEByOffset(member->getTypeOffset());
 			uint64_t member_address = address + member->getDataMemberLocation();
 
-			// Append member variable name to the return string
+			// Append member variable name and value to the return string
 			values += member->getName();
 			values += "=";
-
-			// Get the appropriate variable type to deduce the value and append
-			// to return string
-			DIEBaseType *base_type_die = dynamic_cast<DIEBaseType *>(member_type_die.get());
-			if (base_type_die != nullptr)
-				values += deduce(member_address, *base_type_die);
-
-			DIEArrayType *array_type_die = dynamic_cast<DIEArrayType *>(member_type_die.get());
-			if (array_type_die != nullptr)
-				values += deduce(member_address, *array_type_die);
-
-			DIEStructureType *struct_type_die = dynamic_cast<DIEStructureType *>(member_type_die.get());
-			if (struct_type_die != nullptr)
-				values += deduce(member_address, *struct_type_die);
+			values += deduce(member_address, *member_type_die);
 		}
 	}
 

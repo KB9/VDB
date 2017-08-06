@@ -329,39 +329,5 @@ void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 
 	// Get the relevant type DIE and deduce the value of the variable
 	DebuggingInformationEntry *type_die = debug_data->info()->getDIEByOffset(loc_expr.type_die_offset).get();
-	DIEBaseType *base_type_die = dynamic_cast<DIEBaseType *>(type_die);
-	if (base_type_die != nullptr)
-	{
-		// Deduce the value as a base type
-		value = deducer.deduce(address, *base_type_die);
-		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
-		value_msg->value = value;
-	}
-
-	DIEPointerType *pointer_type_die = dynamic_cast<DIEPointerType *>(type_die);
-	if (pointer_type_die != nullptr)
-	{
-		// Deduce the value as a pointer type
-		value = deducer.deduce(address, *pointer_type_die);
-		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
-		value_msg->value = value;
-	}
-
-	DIEArrayType *array_type_die = dynamic_cast<DIEArrayType *>(type_die);
-	if (array_type_die != nullptr)
-	{
-		// Deduce the value as an array type
-		value = deducer.deduce(address, *array_type_die);
-		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
-		value_msg->value = value;
-	}
-
-	DIEStructureType *struct_type_die = dynamic_cast<DIEStructureType *>(type_die);
-	if (struct_type_die != nullptr)
-	{
-		// Deduce the value as a struct type
-		value = deducer.deduce(address, *struct_type_die);
-		procmsg("[GET_VALUE] Value = %s\n", value.c_str());
-		value_msg->value = value;
-	}
+	value_msg->value = deducer.deduce(address, *type_die);
 }
