@@ -107,3 +107,17 @@ std::unique_ptr<Breakpoint> BreakpointTable::getBreakpoint(uint64_t address)
 		return std::make_unique<Breakpoint>(breakpoints_by_address.at(address));
 	}
 }
+
+bool BreakpointTable::isBreakpoint(const std::string &source_file,
+                                   unsigned int line_number)
+{
+	for (Line line : dwarf->line()->getAllLines())
+	{
+		if (source_file == line.source && line.number == line_number &&
+		    breakpoints_by_address.find(line.address) != breakpoints_by_address.end())
+		{
+			return true;
+		}
+	}
+	return false;
+}

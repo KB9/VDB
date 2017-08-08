@@ -143,7 +143,7 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
 
     // Loop through all visible lines and paint the line numbers in
     QTextBlock block = firstVisibleBlock();
-    int block_number = block.blockNumber();
+    unsigned int block_number = block.blockNumber();
     int top = (int) blockBoundingGeometry(block).translated(contentOffset()).top();
     int bottom = top + (int) blockBoundingGeometry(block).height();
     while (block.isValid() && top <= event->rect().bottom())
@@ -154,8 +154,11 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
             painter.setPen(Qt::black);
 
             // Color the number's background red if it has an assigned breakpoint
-            if (breakpoints.contains(block_number + 1))
+            std::shared_ptr<BreakpointTable> table = vdb->getDebugEngine()->getBreakpoints();
+            if (table->isBreakpoint(this->filepath.toStdString(), block_number + 1))
+            {
                 painter.fillRect(QRectF(0, top, line_number_area->width(), fontMetrics().height()), Qt::red);
+            }
 
             // Draw the line number
             painter.drawText(0, top, line_number_area->width(), fontMetrics().height(), Qt::AlignRight, number);
@@ -188,19 +191,14 @@ unsigned int CodeEditor::getLineNumberFromY(int y)
 
 void CodeEditor::toggleBreakpoint(unsigned int line_number)
 {
-    if (breakpoints.contains(line_number))
+    std::shared_ptr<BreakpointTable> table = vdb->getDebugEngine()->getBreakpoints();
+    if (table->isBreakpoint(this->filepath.toStdString(), line_number))
     {
-        bool removed = vdb->getDebugEngine()->getBreakpoints()->removeBreakpoint(filepath.toStdString().c_str(), line_number);
-        if (removed)
-        {
-            int index = breakpoints.indexOf(line_number);
-            breakpoints.remove(index);
-        }
+        vdb->getDebugEngine()->getBreakpoints()->removeBreakpoint(filepath.toStdString().c_str(), line_number);
     }
     else
     {
-        bool added = vdb->getDebugEngine()->getBreakpoints()->addBreakpoint(filepath.toStdString().c_str(), line_number);
-        if (added) breakpoints.push_back(line_number);
+        vdb->getDebugEngine()->getBreakpoints()->addBreakpoint(filepath.toStdString().c_str(), line_number);
     }
 }
 

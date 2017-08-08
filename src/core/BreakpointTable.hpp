@@ -27,6 +27,8 @@ public:
 	void enableBreakpoints(pid_t target_pid);
 	void disableBreakpoints(pid_t target_pid);
 
+	bool isBreakpoint(const std::string &source_file, unsigned int line_number);
+
 private:
 	std::shared_ptr<DwarfDebug> dwarf = nullptr;
 

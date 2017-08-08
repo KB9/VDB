@@ -59,7 +59,6 @@ private:
     std::shared_ptr<VDB> vdb = nullptr;
 
     LineNumberArea *line_number_area;
-    QVector<unsigned int> breakpoints;
 
     Highlighter *highlighter;
 
