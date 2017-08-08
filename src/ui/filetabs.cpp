@@ -5,16 +5,22 @@ FileTabs::FileTabs(QWidget *parent) : QTabWidget(parent)
     connect(this, SIGNAL(tabCloseRequested(int)), this, SLOT(onTabClosePressed(int)));
 }
 
-int FileTabs::addTab(QWidget *widget, const QIcon &icon, const QString &label)
+bool FileTabs::goToSourceLine(QString filepath, unsigned int line_number)
 {
-    int index = QTabWidget::addTab(widget, icon, label);
-    return index;
-}
-
-int FileTabs::addTab(QWidget *widget, const QString &label)
-{
-    int index = QTabWidget::addTab(widget, label);
-    return index;
+    for (int i = 0; i < count(); i++)
+    {
+        CodeEditor *editor = dynamic_cast<CodeEditor *>(this->widget(i));
+        if (editor != nullptr)
+        {
+            if (editor->getFilePath() == filepath)
+            {
+                setCurrentWidget(editor);
+                editor->goToLine(line_number);
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void FileTabs::onTabClosePressed(int index)

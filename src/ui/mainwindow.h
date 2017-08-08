@@ -21,6 +21,9 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+public slots:
+    void onFileSelected(QString filepath);
+
 private slots:
     void importExecutable();
     void startDebugging();
@@ -30,8 +33,6 @@ private slots:
     void stepOut();
 
     void pollDebugEngine();
-
-    void onFileSelected(QTreeWidgetItem *item, int column);
 
 private:
     void setDebugButtonEnabled(bool enabled, QString text = 0);

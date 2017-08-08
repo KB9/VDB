@@ -18,7 +18,6 @@ class CodeEditor : public QPlainTextEdit
 
 public:
     CodeEditor(QString filepath, std::shared_ptr<VDB> vdb, QWidget *parent = 0);
-    CodeEditor(QString filepath, QStringList lines, std::shared_ptr<VDB> vdb, QWidget *parent = 0);
 
     // Called from LineNumberArea whenever it receives a paint event
     void lineNumberAreaPaintEvent(QPaintEvent *event);
@@ -27,6 +26,8 @@ public:
     unsigned int getLineNumberFromY(int y);
 
     void goToLine(unsigned int line_number);
+
+    QString getFilePath();
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
@@ -61,6 +62,8 @@ private:
     QVector<unsigned int> breakpoints;
 
     Highlighter *highlighter;
+
+    bool readFile(QString filepath, QStringList &lines);
 
     bool matchLeftParenthesis(QTextBlock current_block, int index, int num_right_parentheses,
                               QList<QTextEdit::ExtraSelection> &selections);

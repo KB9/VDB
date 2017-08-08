@@ -41,19 +41,41 @@ CodeEditor::CodeEditor(QString filepath, std::shared_ptr<VDB> vdb, QWidget *pare
 
     // Set the syntax highlighter for the editor
     highlighter = new Highlighter(this->document());
+
+    QStringList lines;
+    bool ok = readFile(filepath, lines);
+    if (ok)
+    {
+        for (QString line : lines)
+        {
+            moveCursor(QTextCursor::End);
+            insertPlainText(line);
+            insertPlainText("\n");
+            moveCursor(QTextCursor::End);
+        }
+
+        moveCursor(QTextCursor::Start);
+    }
 }
 
-CodeEditor::CodeEditor(QString filepath, QStringList lines, std::shared_ptr<VDB> vdb, QWidget *parent) : CodeEditor(filepath, vdb, parent)
+bool CodeEditor::readFile(QString filepath, QStringList &lines)
 {
-    for (QString line : lines)
-    {
-        moveCursor(QTextCursor::End);
-        insertPlainText(line);
-        insertPlainText("\n");
-        moveCursor(QTextCursor::End);
-    }
+    // Ensure the path exists and is actually a file
+    QFile source_file(filepath);
+    QFileInfo info(source_file);
+    if (info.isDir() || !info.exists()) return false;
 
-    moveCursor(QTextCursor::Start);
+    // Open the file and read in the text line-by-line
+    if (source_file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QTextStream in(&source_file);
+        while (!in.atEnd())
+        {
+            lines.append(in.readLine());
+        }
+        source_file.close();
+    }
+    return true;
 }
 
 // Updates the width of the line number area
@@ -299,4 +321,9 @@ void CodeEditor::goToLine(unsigned int line_number)
     QTextDocument *document = this->document();
     QTextCursor cursor(document->findBlockByLineNumber(line_number - 1));
     this->setTextCursor(cursor);
+}
+
+QString CodeEditor::getFilePath()
+{
+    return filepath;
 }
