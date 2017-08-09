@@ -62,7 +62,7 @@ std::string ValueDeducer::deduceBase(uint64_t address, const DIEBaseType &base_d
 	case DW_ATE_boolean:
 	{
 		bool value = (bool)data;
-		return std::to_string(value);
+		return value ? "true" : "false";
 	}
 
 	//case DW_ATE_complex_float:
