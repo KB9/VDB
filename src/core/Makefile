@@ -1,5 +1,6 @@
 CPPFILES = 	Breakpoint.cpp \
 			BreakpointTable.cpp \
+			Unwinder.cpp \
 			dwarf/DebuggingInformationEntry.cpp \
 			dwarf/DIEBaseType.cpp \
 			dwarf/DIECompileUnit.cpp \
