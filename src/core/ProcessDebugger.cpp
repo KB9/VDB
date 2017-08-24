@@ -284,9 +284,12 @@ void ProcessDebugger::onBreakpointHit()
 	}
 	else
 	{
-		// TODO: Need to step over a breakpoint if it stopped on one, otherwise
-		// continuing from a breakpoint line will simply stop on the same line.
-		// However, the next continue action will behave appropriately.
+		// If the step cursor is current stopped on a user breakpoint, step over
+		// it first and then destroy the step cursor
+		std::unique_ptr<Breakpoint> user_bp =
+			breakpoint_table->getBreakpoint(step_cursor->getCurrentAddress());
+		if (user_bp != nullptr)
+			user_bp->stepOver(target_pid);
 		step_cursor = nullptr;
 	}
 
