@@ -1,5 +1,7 @@
 #include "StepCursor.hpp"
 
+#include "Unwinder.hpp"
+
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
@@ -13,45 +15,46 @@ StepCursor::StepCursor(uint64_t address, std::shared_ptr<DwarfDebug> debug_data,
 
 void StepCursor::stepOver(pid_t pid)
 {
-	// Get the current subprogram that is being executed
-	DIESubprogram *current = getSubprogramFromAddress(address);
-
+	// Step over a user breakpoint if current execution was halted by one
 	user_regs_struct regs;
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
-
-	// If a step-over is being carried out from the last line of the current
-	// subprogram
-	Line subprogram_last_line = getLastLineOfSubprogram(*current);
-	if (regs.rip == subprogram_last_line.address)
+	std::unique_ptr<Breakpoint> start_breakpoint = breakpoint_table->getBreakpoint(regs.rip - 1);
+	if (start_breakpoint != nullptr)
 	{
-		// Simply jump to the next line as the end of the current
-		// subprogram has been reached
-		uint64_t next_address = stepToNextSourceLine(pid, regs.rip);
-		updateTrackingVars(next_address);
+		start_breakpoint->stepOver(pid);
 	}
-	else
-	{
-		// It's not the last line of the current subprogram, therefore execution
-		// must return here at some point.
-		// Step to the address of the next source line to be executed in the
-		// same subprogram.
-		uint64_t next_address = stepToNextSourceLine(pid, address);
-		while (getSubprogramFromAddress(next_address)->name != current->name)
-		{
-			next_address = stepToNextSourceLine(pid, next_address);
-		}
 
-		// Update the tracking vars
-		updateTrackingVars(next_address);
-	}
+	// Perform the step to the next source line, update the tracking variables
+	uint64_t next_address = stepToNextSourceLine(pid, address);
+	updateTrackingVars(next_address);
 }
 
 void StepCursor::stepInto(pid_t pid)
 {
-	// Step to the address of the next source line to be executed
-	uint64_t next_address = stepToNextSourceLine(pid, address);
+	// Step over a user breakpoint if current execution was halted by one
+	user_regs_struct regs;
+	ptrace(PTRACE_GETREGS, pid, 0, &regs);
+	std::unique_ptr<Breakpoint> start_breakpoint = breakpoint_table->getBreakpoint(regs.rip - 1);
+	if (start_breakpoint != nullptr)
+	{
+		start_breakpoint->stepOver(pid);
+	}
+	// Or just perform a single step if not stopped on a user breakpoint
+	else
+	{
+		// Single step and wait for completion
+		int wait_status;
+		if (ptrace(PTRACE_SINGLESTEP, pid, 0, 0))
+		{
+			perror("ptrace");
+			return;
+		}
+		wait(&wait_status);
+	}
 
-	// Update the tracking vars
+	// Perform the step to the next source line, update the tracking variables
+	ptrace(PTRACE_GETREGS, pid, 0, &regs);
+	uint64_t next_address = stepToNextSourceLine(pid, regs.rip, true);
 	updateTrackingVars(next_address);
 }
 
@@ -70,73 +73,55 @@ std::string StepCursor::getCurrentSourceFile()
 	return source_file;
 }
 
-uint64_t StepCursor::stepToNextSourceLine(pid_t pid, uint64_t addr)
+uint64_t StepCursor::stepToNextSourceLine(pid_t pid, uint64_t addr,
+                                          bool include_current_addr)
 {
-	user_regs_struct regs;
+
+	// Create the interal step breakpoints for the current subprogram
+	std::unique_ptr<BreakpointTable> internal_breakpoints =
+			createSubprogramBreakpoints(pid, addr, include_current_addr);
+
+	// Enable all internal breakpoints so that they can halt execution
+	internal_breakpoints->enableBreakpoints(pid);
+
+	// Continue until the next breakpoint is hit
 	int wait_status;
+	if (ptrace(PTRACE_CONT, pid, 0, 0) < 0)
+	{
+		perror("ptrace");
+		return 0;
+	}
+	wait(&wait_status);
 
-	// Get registers
+	// Disable all internal breakpoints and decide which address to return
+	internal_breakpoints->disableBreakpoints(pid);
+	user_regs_struct regs;
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
-
-	// Keep single stepping until a valid source line is reached and is
-	// not the same line as the address passed in
-	while (!isSourceLine(regs.rip) || regs.rip == addr)
+	if (internal_breakpoints->getBreakpoint(regs.rip - 1) != nullptr)
 	{
-		// If we are stopped on a breakpoint, step over that first
-		if (isBreakpointInstruction(pid, regs.rip - 1))
-		{
-			breakpoint_table->getBreakpoint(regs.rip - 1)->stepOver(pid);
-		}
-
-		// Single step and wait for completion
-		if (ptrace(PTRACE_SINGLESTEP, pid, 0, 0))
-		{
-			perror("ptrace");
-			return 0;
-		}
-		wait(&wait_status);
-
-		// Get current address of instruction pointer
+		// If it's an internal breakpoint, rewind the IP by 1 so that it the
+		// instruction that was hidden by the breakpoint will be the next to be
+		// executed.
 		ptrace(PTRACE_GETREGS, pid, 0, &regs);
-	}
-	return regs.rip;
-}
+		regs.rip = regs.rip - 1;
+		ptrace(PTRACE_SETREGS, pid, 0, &regs);
 
-bool StepCursor::isSourceLine(uint64_t addr)
-{
-	std::vector<Line> lines = debug_data->line()->getAllLines();
-	for (auto line : lines)
+		return regs.rip;
+	}
+	else if (breakpoint_table->getBreakpoint(regs.rip - 1) != nullptr)
 	{
-		if (line.address == addr)
-		{
-			return true;
-		}
+		// If it's a user breakpoint, pretend that the IP has been rewound by 1
+		// so that this breakpoint can be stepped over using the real IP if needed
+		// (this return value is only used to update the tracking address).
+		return regs.rip - 1;
 	}
-	return false;
-}
-
-Line StepCursor::getLastLineOfSubprogram(DIESubprogram &subprogram)
-{
-	std::vector<Line> results;
-
-	// Get all lines that lie in the address range of the specified subprogram
-	std::vector<Line> lines = debug_data->line()->getAllLines();
-	for (auto line : lines)
+	else
 	{
-		if (line.address >= subprogram.lowpc && line.address < (subprogram.lowpc + subprogram.highpc))
-		{
-			results.push_back(line);
-		}
+		// Execution should not reach this point. If execution reaches here, it
+		// means there was a serious problem with the debug target process.
+		assert(false && "Step cursor did not hit the next breakpoint!");
+		return 0;
 	}
-
-	// Iterate over the results to find the last line by line number
-	Line *last_line = &results[0];
-	for (unsigned int i = 1; i < results.size(); i++)
-	{
-		if (results[i].number > last_line->number) last_line = &results[i];
-	}
-
-	return *last_line;
 }
 
 DIESubprogram *StepCursor::getSubprogramFromAddress(uint64_t address)
@@ -157,7 +142,50 @@ DIESubprogram *StepCursor::getSubprogramFromAddress(uint64_t address)
 			}
 		}
 	}
+	if (current_prog != nullptr) procmsg("%s\n", current_prog->name.c_str());
 	return current_prog;
+}
+
+std::unique_ptr<BreakpointTable> StepCursor::createSubprogramBreakpoints(pid_t pid,
+                                                                         uint64_t addr,
+                                                                         bool include_current_addr)
+{
+	// Initialize the internal breakpoint table
+	auto internal_breakpoints = std::make_unique<BreakpointTable>(debug_data);
+
+	// Set breakpoints on lines which don't have a user breakpoint, and which
+	// aren't the line currently stopped on
+	std::vector<Line> lines = debug_data->line()->getAllLines();
+	DIESubprogram *current = getSubprogramFromAddress(addr);
+	for (auto line : lines)
+	{
+		if (line.address >= current->lowpc &&
+		    line.address < (current->lowpc + current->highpc) &&
+		    breakpoint_table->getBreakpoint(line.address) == nullptr)
+		{
+			// If the line address is not equal to the current address, add it
+			if (line.address != addr)
+			{
+				internal_breakpoints->addBreakpoint(line.address);
+			}
+			// If the line address is equal to the current address and the
+			// current address inclusion flag has been enabled, add it
+			else if (include_current_addr)
+			{
+				internal_breakpoints->addBreakpoint(line.address);
+			}
+		}
+	}
+
+	// Include a breakpoint at the point in the code that this functions returns
+	// to as well (if there isn't already a user breakpoint there)
+	Unwinder unwinder(pid);
+	unwinder.unwindStep();
+	uint64_t return_address = unwinder.getRegisterValue(UNW_REG_IP);
+	if (breakpoint_table->getBreakpoint(return_address) == nullptr)
+		internal_breakpoints->addBreakpoint(return_address);
+
+	return std::move(internal_breakpoints);
 }
 
 void StepCursor::updateTrackingVars(uint64_t addr)
@@ -189,12 +217,6 @@ void StepCursor::updateTrackingVars(uint64_t addr)
 	this->source_file = src_file;
 	this->line_number = src_line_number;
 
-	procmsg("[STEP_CURSOR] Tracking vars updated: address = 0x%x, source = %s, line = %llu\n", address, source_file.c_str(), line_number);
-}
-
-bool StepCursor::isBreakpointInstruction(pid_t pid, uint64_t addr)
-{
-	uint64_t data = ptrace(PTRACE_PEEKTEXT, pid, addr, 0);
-	procmsg("[IS_BREAKPOINT_INSTRUCTION] 0x%x: 0x%x\n", addr, data);
-	return (data & 0xFF) == 0xCC;
+	procmsg("[STEP_CURSOR] Tracking vars updated: address = 0x%x, source = %s, line = %llu\n",
+	        address, source_file.c_str(), line_number);
 }
