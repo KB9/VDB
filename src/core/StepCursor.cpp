@@ -58,6 +58,22 @@ void StepCursor::stepInto(pid_t pid)
 	updateTrackingVars(next_address);
 }
 
+void StepCursor::stepOut(pid_t pid)
+{
+	// Step over a user breakpoint if current execution was halted by one
+	user_regs_struct regs;
+	ptrace(PTRACE_GETREGS, pid, 0, &regs);
+	std::unique_ptr<Breakpoint> start_breakpoint = breakpoint_table->getBreakpoint(regs.rip - 1);
+	if (start_breakpoint != nullptr)
+	{
+		start_breakpoint->stepOver(pid);
+	}
+
+	// Perform the step to the calling function, update the tracking variables
+	uint64_t next_address = stepToCallingFunction(pid, address);
+	updateTrackingVars(next_address);
+}
+
 uint64_t StepCursor::getCurrentAddress()
 {
 	return address;
@@ -94,6 +110,54 @@ uint64_t StepCursor::stepToNextSourceLine(pid_t pid, uint64_t addr,
 	wait(&wait_status);
 
 	// Disable all internal breakpoints and decide which address to return
+	internal_breakpoints->disableBreakpoints(pid);
+	user_regs_struct regs;
+	ptrace(PTRACE_GETREGS, pid, 0, &regs);
+	if (internal_breakpoints->getBreakpoint(regs.rip - 1) != nullptr)
+	{
+		// If it's an internal breakpoint, rewind the IP by 1 so that it the
+		// instruction that was hidden by the breakpoint will be the next to be
+		// executed.
+		ptrace(PTRACE_GETREGS, pid, 0, &regs);
+		regs.rip = regs.rip - 1;
+		ptrace(PTRACE_SETREGS, pid, 0, &regs);
+
+		return regs.rip;
+	}
+	else if (breakpoint_table->getBreakpoint(regs.rip - 1) != nullptr)
+	{
+		// If it's a user breakpoint, pretend that the IP has been rewound by 1
+		// so that this breakpoint can be stepped over using the real IP if needed
+		// (this return value is only used to update the tracking address).
+		return regs.rip - 1;
+	}
+	else
+	{
+		// Execution should not reach this point. If execution reaches here, it
+		// means there was a serious problem with the debug target process.
+		assert(false && "Step cursor did not hit the next breakpoint!");
+		return 0;
+	}
+}
+
+uint64_t StepCursor::stepToCallingFunction(pid_t pid, uint64_t addr)
+{
+	// Create the interal step breakpoint to return to the calling function
+	std::unique_ptr<BreakpointTable> internal_breakpoints = createReturnBreakpoint(pid, addr);
+
+	// Enable the internal breakpoint so that it can halt execution
+	internal_breakpoints->enableBreakpoints(pid);
+
+	// Continue until the next breakpoint is hit
+	int wait_status;
+	if (ptrace(PTRACE_CONT, pid, 0, 0) < 0)
+	{
+		perror("ptrace");
+		return 0;
+	}
+	wait(&wait_status);
+
+	// Disable the internal breakpoint and decide which address to return
 	internal_breakpoints->disableBreakpoints(pid);
 	user_regs_struct regs;
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
@@ -177,8 +241,25 @@ std::unique_ptr<BreakpointTable> StepCursor::createSubprogramBreakpoints(pid_t p
 		}
 	}
 
-	// Include a breakpoint at the point in the code that this functions returns
+	// Include a breakpoint at the point in the code that this function returns
 	// to as well (if there isn't already a user breakpoint there)
+	Unwinder unwinder(pid);
+	unwinder.unwindStep();
+	uint64_t return_address = unwinder.getRegisterValue(UNW_REG_IP);
+	if (breakpoint_table->getBreakpoint(return_address) == nullptr)
+		internal_breakpoints->addBreakpoint(return_address);
+
+	return std::move(internal_breakpoints);
+}
+
+std::unique_ptr<BreakpointTable> StepCursor::createReturnBreakpoint(pid_t pid,
+                                                                    uint64_t addr)
+{
+	// Initialize the internal breakpoint table
+	auto internal_breakpoints = std::make_unique<BreakpointTable>(debug_data);
+
+	// Include a breakpoint at the point in the code that this function returns
+	// to (if there isn't already a user breakpoint there)
 	Unwinder unwinder(pid);
 	unwinder.unwindStep();
 	uint64_t return_address = unwinder.getRegisterValue(UNW_REG_IP);

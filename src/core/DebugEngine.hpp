@@ -28,6 +28,7 @@ public:
 
 	void stepOver();
 	void stepInto();
+	void stepOut();
 	void continueExecution();
 
 	void sendMessage(std::unique_ptr<DebugMessage> msg);

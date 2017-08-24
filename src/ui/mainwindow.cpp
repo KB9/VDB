@@ -163,7 +163,9 @@ void MainWindow::stepInto()
 
 void MainWindow::stepOut()
 {
-
+    if (!vdb->isInitialized()) return;
+    if (vdb->getDebugEngine()->isDebugging())
+        vdb->getDebugEngine()->stepOut();
 }
 
 void MainWindow::setDebugButtonEnabled(bool enabled, QString text)

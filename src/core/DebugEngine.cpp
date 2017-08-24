@@ -36,6 +36,11 @@ void DebugEngine::stepInto()
 	debugger->stepInto();
 }
 
+void DebugEngine::stepOut()
+{
+	debugger->stepOut();
+}
+
 void DebugEngine::continueExecution()
 {
 	debugger->continueExecution();

@@ -24,6 +24,7 @@ public:
 
 	void stepOver(pid_t pid);
 	void stepInto(pid_t pid);
+	void stepOut(pid_t pid);
 
 	uint64_t getCurrentAddress();
 	uint64_t getCurrentLineNumber();
@@ -40,9 +41,12 @@ private:
 
 	uint64_t stepToNextSourceLine(pid_t pid, uint64_t addr,
 	                              bool include_current_addr = false);
+	uint64_t stepToCallingFunction(pid_t pid, uint64_t addr);
 	DIESubprogram *getSubprogramFromAddress(uint64_t address);
 	std::unique_ptr<BreakpointTable> createSubprogramBreakpoints(pid_t pid,
 	                                                             uint64_t addr,
 	                                                             bool include_current_addr);
+	std::unique_ptr<BreakpointTable> createReturnBreakpoint(pid_t pid,
+	                                                        uint64_t addr);
 	void updateTrackingVars(uint64_t addr);
 };

@@ -51,6 +51,12 @@ void ProcessDebugger::stepInto()
 	cv.notify_all();
 }
 
+void ProcessDebugger::stepOut()
+{
+	breakpoint_action = STEP_OUT;
+	cv.notify_all();
+}
+
 void ProcessDebugger::continueExecution()
 {
 	breakpoint_action = CONTINUE;
@@ -235,7 +241,8 @@ void ProcessDebugger::onBreakpointHit()
 		}
 
 		// Perform any stepping actions required
-		if (breakpoint_action == STEP_OVER || breakpoint_action == STEP_INTO)
+		if (breakpoint_action == STEP_OVER || breakpoint_action == STEP_INTO ||
+		    breakpoint_action == STEP_OUT)
 		{
 			// Initialize the step cursor if it hasn't already been initialized
 			if (step_cursor == nullptr)
@@ -254,6 +261,11 @@ void ProcessDebugger::onBreakpointHit()
 				case STEP_INTO:
 				{
 					step_cursor->stepInto(target_pid);
+					break;
+				}
+				case STEP_OUT:
+				{
+					step_cursor->stepOut(target_pid);
 					break;
 				}
 				default:

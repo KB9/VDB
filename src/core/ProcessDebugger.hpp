@@ -31,6 +31,7 @@ enum BreakpointAction
 	UNDEFINED,
 	STEP_OVER,
 	STEP_INTO,
+	STEP_OUT,
 	CONTINUE
 };
 
@@ -73,6 +74,7 @@ public:
 	void continueExecution();
 	void stepOver();
 	void stepInto();
+	void stepOut();
 
 	void enqueue(std::unique_ptr<DebugMessage> msg);
 	std::unique_ptr<DebugMessage> tryPoll();
