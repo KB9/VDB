@@ -38,7 +38,8 @@ HEADERS  += mainwindow.h \
     highlighter.h \
     filetabs.h \
     filetree.h \
-    watchtable.h
+    watchtable.h \
+    stacktracelist.h
 
 FORMS    += mainwindow.ui
 
@@ -46,3 +47,5 @@ LIBS += -L"../../bin/core" -lvdb
 
 INCLUDEPATH += "../core/"
 INCLUDEPATH += "/usr/include/libdwarf/"
+
+CONFIG += c++14

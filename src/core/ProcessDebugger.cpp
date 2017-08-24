@@ -237,6 +237,10 @@ void ProcessDebugger::onBreakpointHit()
 			if (value_msg != nullptr)
 				deduceValue(value_msg);
 
+			GetStackTraceMessage *stack_msg = dynamic_cast<GetStackTraceMessage *>(msg.get());
+			if (stack_msg != nullptr)
+				getStackTrace(stack_msg);
+
 			message_queue_out.push(std::move(msg));
 		}
 
@@ -345,4 +349,11 @@ void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 	// Get the relevant type DIE and deduce the value of the variable
 	DebuggingInformationEntry *type_die = debug_data->info()->getDIEByOffset(loc_expr.type_die_offset).get();
 	value_msg->value = deducer.deduce(address, *type_die);
+}
+
+void ProcessDebugger::getStackTrace(GetStackTraceMessage *stack_msg)
+{
+	Unwinder unwinder(target_pid);
+	stack_msg->stack = unwinder.traceStack();
+	unwinder.reset();
 }

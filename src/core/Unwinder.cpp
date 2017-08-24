@@ -49,6 +49,27 @@ void Unwinder::unwindStep(unsigned int steps)
 	while (result > 0 && step_count < steps);
 }
 
+std::vector<StackEntry> Unwinder::traceStack()
+{
+	// Continue unwinding until failure
+	std::vector<StackEntry> stack;
+	int result = 0;
+	unw_word_t offset;
+	do
+	{
+		char buffer[512];
+		unw_get_proc_name(&cursor, buffer, sizeof(buffer), &offset);
+		stack.emplace_back(std::string(buffer), offset);
+
+		result = unw_step(&cursor);
+		if (result < 0)
+			procmsg("[UNWIND_ERROR] unw_step failed! (%d)\n", result);
+	}
+	while (result > 0);
+
+	return std::move(stack);
+}
+
 unw_word_t Unwinder::getRegisterValue(unw_regnum_t reg_num)
 {
 	unw_word_t val;

@@ -19,6 +19,7 @@
 #include <string>
 
 #include "StepCursor.hpp"
+#include "Unwinder.hpp"
 
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
@@ -33,6 +34,12 @@ enum BreakpointAction
 	STEP_INTO,
 	STEP_OUT,
 	CONTINUE
+};
+
+class GetStackTraceMessage : public DebugMessage
+{
+public:
+	std::vector<StackEntry> stack;
 };
 
 class GetValueMessage : public DebugMessage
@@ -113,6 +120,7 @@ private:
 	void onBreakpointHit();
 
 	void deduceValue(GetValueMessage *value_msg);
+	void getStackTrace(GetStackTraceMessage *stack_msg);
 
 	std::unique_ptr<StepCursor> step_cursor = nullptr;
 };

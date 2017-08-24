@@ -63,6 +63,9 @@ void MainWindow::pollDebugEngine()
                 ui->fileTabWidget->addTab(editor, filename);
                 editor->goToLine(bph_msg->line_number);
             }
+
+            // Get a stack trace now that a breakpoint has been hit
+            vdb->getDebugEngine()->sendMessage(std::make_unique<GetStackTraceMessage>());
         }
 
         StepMessage *step_msg = dynamic_cast<StepMessage *>(msg.get());
@@ -82,6 +85,9 @@ void MainWindow::pollDebugEngine()
                 ui->fileTabWidget->addTab(editor, filename);
                 editor->goToLine(step_msg->line_number);
             }
+
+            // Get a stack trace after step
+            vdb->getDebugEngine()->sendMessage(std::make_unique<GetStackTraceMessage>());
         }
 
         TargetExitMessage *exit_msg = dynamic_cast<TargetExitMessage *>(msg.get());
@@ -90,6 +96,18 @@ void MainWindow::pollDebugEngine()
             // Reset breakpoint control buttons to their default state
             setDebugButtonEnabled(true, "Start Debugging");
             setBreakpointStepControlsEnabled(false);
+        }
+
+        GetStackTraceMessage *stack_msg = dynamic_cast<GetStackTraceMessage *>(msg.get());
+        if (stack_msg != nullptr)
+        {
+            ui->stackList->clear();
+            for (StackEntry entry : stack_msg->stack)
+            {
+                QString function_name = QString::fromStdString(entry.function_name);
+                QString offset = QString::number(entry.offset);
+                ui->stackList->addItem(function_name + "+" + offset);
+            }
         }
     }
 }

@@ -8,6 +8,21 @@
 
 #include <libunwind-ptrace.h>
 
+#include <string>
+#include <vector>
+
+struct StackEntry
+{
+	StackEntry(std::string function_name, uint64_t offset) :
+		function_name(function_name),
+		offset(offset)
+	{
+	}
+
+	const std::string function_name;
+	const uint64_t offset;
+};
+
 class Unwinder
 {
 public:
@@ -16,6 +31,8 @@ public:
 
 	void unwindStep(unsigned int steps = 1);
 	unw_word_t getRegisterValue(unw_regnum_t reg_num);
+
+	std::vector<StackEntry> traceStack();
 
 	void reset();
 
