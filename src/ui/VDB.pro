@@ -49,3 +49,8 @@ INCLUDEPATH += "../core/"
 INCLUDEPATH += "/usr/include/libdwarf/"
 
 CONFIG += c++14
+
+DESTDIR = ../../bin/ui
+OBJECTS_DIR = ../../bin/ui/obj
+MOC_DIR = ../../bin/ui/moc
+UI_DIR = ../../bin/ui/ui
