@@ -14,6 +14,7 @@ CPPFILES = 	Breakpoint.cpp \
 			dwarf/DIEStructureType.cpp \
 			dwarf/DIEClassType.cpp \
 			dwarf/DIEMemberType.cpp \
+			dwarf/DIEConstType.cpp \
 			dwarf/CUHeader.cpp \
 			dwarf/DebugInfo.cpp \
 			dwarf/DebugLine.cpp \
