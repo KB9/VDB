@@ -16,11 +16,13 @@
 #include "dwarf/DwarfDebug.hpp"
 #include "BreakpointTable.hpp"
 
+// Provides functionality for source-level stepping including stepping over
+// lines, stepping into functions and stepping out of functions.
 class StepCursor
 {
 public:
 	StepCursor(uint64_t address, std::shared_ptr<DwarfDebug> debug_data,
-	           std::shared_ptr<BreakpointTable> breakpoint_table);
+	           std::shared_ptr<BreakpointTable> user_breakpoints);
 
 	void stepOver(pid_t pid);
 	void stepInto(pid_t pid);
@@ -32,7 +34,7 @@ public:
 
 private:
 	std::shared_ptr<DwarfDebug> debug_data = nullptr;
-	std::shared_ptr<BreakpointTable> breakpoint_table = nullptr;
+	std::shared_ptr<BreakpointTable> user_breakpoints = nullptr;
 
 	// Updated after every step to keep track of the cursor
 	uint64_t address;

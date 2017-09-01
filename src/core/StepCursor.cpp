@@ -6,10 +6,10 @@
 void procmsg(const char* format, ...);
 
 StepCursor::StepCursor(uint64_t address, std::shared_ptr<DwarfDebug> debug_data,
-                       std::shared_ptr<BreakpointTable> breakpoint_table)
+                       std::shared_ptr<BreakpointTable> user_breakpoints)
 {
 	this->debug_data = debug_data;
-	this->breakpoint_table = breakpoint_table;
+	this->user_breakpoints = user_breakpoints;
 	updateTrackingVars(address);
 }
 
@@ -18,7 +18,7 @@ void StepCursor::stepOver(pid_t pid)
 	// Step over a user breakpoint if current execution was halted by one
 	user_regs_struct regs;
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
-	std::unique_ptr<Breakpoint> start_breakpoint = breakpoint_table->getBreakpoint(regs.rip - 1);
+	std::unique_ptr<Breakpoint> start_breakpoint = user_breakpoints->getBreakpoint(regs.rip - 1);
 	if (start_breakpoint != nullptr)
 	{
 		start_breakpoint->stepOver(pid);
@@ -36,7 +36,7 @@ void StepCursor::stepInto(pid_t pid)
 
 	user_regs_struct regs;
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
-	std::unique_ptr<Breakpoint> start_breakpoint = breakpoint_table->getBreakpoint(regs.rip - 1);
+	std::unique_ptr<Breakpoint> start_breakpoint = user_breakpoints->getBreakpoint(regs.rip - 1);
 	if (start_breakpoint != nullptr)
 	{
 		start_breakpoint->stepOver(pid);
@@ -55,8 +55,8 @@ void StepCursor::stepInto(pid_t pid)
 	// that was started on)
 	while (getSubprogramFromAddress(regs.rip)->name == current->name &&
 	       internal_breakpoints->getBreakpoint(regs.rip - 1) == nullptr &&
-	       (breakpoint_table->getBreakpoint(regs.rip - 1) == nullptr ||
-	       breakpoint_table->getBreakpoint(regs.rip - 1)->addr == start_breakpoint->addr))
+	       (user_breakpoints->getBreakpoint(regs.rip - 1) == nullptr ||
+	       user_breakpoints->getBreakpoint(regs.rip - 1)->addr == start_breakpoint->addr))
 	{
 		int wait_status;
 		if (ptrace(PTRACE_SINGLESTEP, pid, 0, 0))
@@ -87,7 +87,7 @@ void StepCursor::stepInto(pid_t pid)
 	}
 	// If the step cursor hit a user breakpoint i.e. execution did not leave
 	// the current function
-	else if (breakpoint_table->getBreakpoint(regs.rip - 1) != nullptr)
+	else if (user_breakpoints->getBreakpoint(regs.rip - 1) != nullptr)
 	{
 		// If it's a user breakpoint, pretend that the IP has been rewound by 1
 		// so that this breakpoint can be stepped over using the real IP if needed
@@ -97,10 +97,6 @@ void StepCursor::stepInto(pid_t pid)
 	// If the subprogram name changed i.e. execution entered a new function
 	else if (getSubprogramFromAddress(regs.rip)->name != current->name)
 	{
-		// Continue to the next source line
-		//uint64_t next_address = stepToNextSourceLine(pid, regs.rip);
-		//updateTrackingVars(next_address);
-
 		// Update the tracking variables with the 1st address in the new function
 		updateTrackingVars(regs.rip);
 	}
@@ -117,7 +113,7 @@ void StepCursor::stepOut(pid_t pid)
 	// Step over a user breakpoint if current execution was halted by one
 	user_regs_struct regs;
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
-	std::unique_ptr<Breakpoint> start_breakpoint = breakpoint_table->getBreakpoint(regs.rip - 1);
+	std::unique_ptr<Breakpoint> start_breakpoint = user_breakpoints->getBreakpoint(regs.rip - 1);
 	if (start_breakpoint != nullptr)
 	{
 		start_breakpoint->stepOver(pid);
@@ -177,7 +173,7 @@ uint64_t StepCursor::stepToNextSourceLine(pid_t pid, uint64_t addr,
 
 		return regs.rip;
 	}
-	else if (breakpoint_table->getBreakpoint(regs.rip - 1) != nullptr)
+	else if (user_breakpoints->getBreakpoint(regs.rip - 1) != nullptr)
 	{
 		// If it's a user breakpoint, pretend that the IP has been rewound by 1
 		// so that this breakpoint can be stepped over using the real IP if needed
@@ -225,7 +221,7 @@ uint64_t StepCursor::stepToCallingFunction(pid_t pid, uint64_t addr)
 
 		return regs.rip;
 	}
-	else if (breakpoint_table->getBreakpoint(regs.rip - 1) != nullptr)
+	else if (user_breakpoints->getBreakpoint(regs.rip - 1) != nullptr)
 	{
 		// If it's a user breakpoint, pretend that the IP has been rewound by 1
 		// so that this breakpoint can be stepped over using the real IP if needed
@@ -278,7 +274,7 @@ std::unique_ptr<BreakpointTable> StepCursor::createSubprogramBreakpoints(pid_t p
 	{
 		if (line.address >= current->lowpc &&
 		    line.address < (current->lowpc + current->highpc) &&
-		    breakpoint_table->getBreakpoint(line.address) == nullptr)
+		    user_breakpoints->getBreakpoint(line.address) == nullptr)
 		{
 			// If the line address is not equal to the current address, add it
 			if (line.address != addr)
@@ -299,7 +295,7 @@ std::unique_ptr<BreakpointTable> StepCursor::createSubprogramBreakpoints(pid_t p
 	Unwinder unwinder(pid);
 	unwinder.unwindStep();
 	uint64_t return_address = unwinder.getRegisterValue(UNW_REG_IP);
-	if (breakpoint_table->getBreakpoint(return_address) == nullptr)
+	if (user_breakpoints->getBreakpoint(return_address) == nullptr)
 		internal_breakpoints->addBreakpoint(return_address);
 
 	return std::move(internal_breakpoints);
@@ -316,7 +312,7 @@ std::unique_ptr<BreakpointTable> StepCursor::createReturnBreakpoint(pid_t pid,
 	Unwinder unwinder(pid);
 	unwinder.unwindStep();
 	uint64_t return_address = unwinder.getRegisterValue(UNW_REG_IP);
-	if (breakpoint_table->getBreakpoint(return_address) == nullptr)
+	if (user_breakpoints->getBreakpoint(return_address) == nullptr)
 		internal_breakpoints->addBreakpoint(return_address);
 
 	return std::move(internal_breakpoints);
