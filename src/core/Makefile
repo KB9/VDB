@@ -6,6 +6,7 @@ CPPFILES = 	Breakpoint.cpp \
 			dwarf/DIECompileUnit.cpp \
 			dwarf/DIELexicalBlock.cpp \
 			dwarf/DIEPointerType.cpp \
+			dwarf/DIEReferenceType.cpp \
 			dwarf/DIESubprogram.cpp \
 			dwarf/DIEFormalParameter.cpp \
 			dwarf/DIEVariable.cpp \
