@@ -23,26 +23,26 @@ void FileTree::populate(std::vector<CUHeader> &cu_headers)
     }
 }
 
-void FileTree::insertFile(QStringList pathParts, QTreeWidgetItem *item)
+void FileTree::insertFile(QStringList path_parts, QTreeWidgetItem *item)
 {
-    if (pathParts.size() == 0) return;
+    if (path_parts.size() == 0) return;
 
     bool found = false;
     for (int i = 0; i < item->childCount(); i++)
     {
-        if (item->child(i)->text(0) == pathParts.at(i))
+        if (item->child(i)->text(0) == path_parts.at(0))
         {
-            pathParts.removeAt(0);
-            insertFile(pathParts, item->child(i));
+            path_parts.removeAt(0);
+            insertFile(path_parts, item->child(i));
             found = true;
         }
     }
 
     if (!found)
     {
-        QTreeWidgetItem *new_item = new QTreeWidgetItem(item, QStringList(pathParts.at(0)));
-        pathParts.removeAt(0);
-        insertFile(pathParts, new_item);
+        QTreeWidgetItem *new_item = new QTreeWidgetItem(item, QStringList(path_parts.at(0)));
+        path_parts.removeAt(0);
+        insertFile(path_parts, new_item);
     }
 }
 

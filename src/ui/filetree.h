@@ -24,7 +24,7 @@ private slots:
     void onFileClicked(QTreeWidgetItem *item, int column);
 
 private:
-    void insertFile(QStringList pathParts, QTreeWidgetItem *item);
+    void insertFile(QStringList path_parts, QTreeWidgetItem *item);
 };
 
 #endif // FILETREE_H
