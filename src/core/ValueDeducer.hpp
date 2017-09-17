@@ -7,6 +7,7 @@
 #include "dwarf/DIEArrayType.hpp"
 #include "dwarf/DIEStructureType.hpp"
 #include "dwarf/DIEClassType.hpp"
+#include "dwarf/DIEConstType.hpp"
 #include "dwarf/DwarfDebug.hpp"
 
 class ValueDeducer
@@ -25,4 +26,5 @@ private:
 	std::string deduceArray(uint64_t address, DIEArrayType &array_die);
 	std::string deduceStructure(uint64_t address, DIEStructureType &struct_die);
 	std::string deduceClass(uint64_t address, DIEClassType &class_die);
+	std::string deduceConst(uint64_t address, DIEConstType &const_die);
 };

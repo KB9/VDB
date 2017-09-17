@@ -43,6 +43,11 @@ std::string ValueDeducer::deduce(uint64_t address, DebuggingInformationEntry &ty
 		DIEClassType *die_class_type = dynamic_cast<DIEClassType *>(&type_die);
 		return deduceClass(address, *die_class_type);
 	}
+	else if (type_die.getTagName() == "DW_TAG_const_type")
+	{
+		DIEConstType *die_const_type = dynamic_cast<DIEConstType *>(&type_die);
+		return deduceConst(address, *die_const_type);
+	}
 	else
 	{
 		return "Type cannot be deduced";
@@ -264,4 +269,12 @@ std::string ValueDeducer::deduceClass(uint64_t address, DIEClassType &class_die)
 	values += "}";
 
 	return values;
+}
+
+std::string ValueDeducer::deduceConst(uint64_t address, DIEConstType &const_die)
+{
+	// Get the type of the array
+	std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(const_die.getTypeOffset());
+	if (die == nullptr) return "Error retrieving const variable type";
+	return deduce(address, *die);
 }
