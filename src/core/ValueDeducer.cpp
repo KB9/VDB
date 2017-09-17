@@ -28,6 +28,11 @@ std::string ValueDeducer::deduce(uint64_t address, DebuggingInformationEntry &ty
 		DIEPointerType *die_ptr_type = dynamic_cast<DIEPointerType *>(&type_die);
 		return deducePointer(address, *die_ptr_type);
 	}
+	else if (type_die.getTagName() == "DW_TAG_reference_type")
+	{
+		DIEReferenceType* die_ref_type = dynamic_cast<DIEReferenceType *>(&type_die);
+		return deduceReference(address, *die_ref_type);
+	}
 	else if (type_die.getTagName() == "DW_TAG_array_type")
 	{
 		DIEArrayType *die_array_type = dynamic_cast<DIEArrayType *>(&type_die);
@@ -173,6 +178,15 @@ std::string ValueDeducer::deducePointer(uint64_t address, const DIEPointerType &
 	return deduce(new_address, *die);
 }
 
+std::string ValueDeducer::deduceReference(uint64_t address, const DIEReferenceType &ref_die)
+{
+	std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(ref_die.type_offset);
+	if (die == nullptr) return "Error retrieving reference type";
+
+	uint64_t new_address = ptrace(PTRACE_PEEKDATA, target_pid, address, 0);
+	return deduce(new_address, *die);
+}
+
 std::string ValueDeducer::deduceArray(uint64_t address, DIEArrayType &array_die)
 {
 	// Get the type of the array
@@ -271,7 +285,7 @@ std::string ValueDeducer::deduceClass(uint64_t address, DIEClassType &class_die)
 	return values;
 }
 
-std::string ValueDeducer::deduceConst(uint64_t address, DIEConstType &const_die)
+std::string ValueDeducer::deduceConst(uint64_t address, const DIEConstType &const_die)
 {
 	// Get the type of the array
 	std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(const_die.getTypeOffset());
