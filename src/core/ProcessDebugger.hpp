@@ -121,6 +121,7 @@ private:
 
 	void deduceValue(GetValueMessage *value_msg);
 	void getStackTrace(GetStackTraceMessage *stack_msg);
+	bool isWithinScope(DebuggingInformationEntry &die);
 
 	std::unique_ptr<StepCursor> step_cursor = nullptr;
 };

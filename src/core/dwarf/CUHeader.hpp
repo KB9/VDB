@@ -24,6 +24,8 @@ struct VariableLocExpr
 	uint8_t frame_base;
 	uint8_t location_op;
 	uint8_t *location_param;
+
+	std::shared_ptr<DebuggingInformationEntry> die = nullptr;
 };
 
 template <class T>
@@ -165,6 +167,8 @@ private:
 						break;
 					}
 				}
+
+				expr.die = die_ptr;
 
 				// Append the location expression after all retrievable data
 				// has been found

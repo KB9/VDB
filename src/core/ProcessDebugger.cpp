@@ -323,6 +323,7 @@ void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 		auto loc_exprs = header.getLocExprsFromVarName<DIEVariable>(value_msg->variable_name.c_str());
 		if (loc_exprs.size() > 0)
 		{
+			// TODO: What happens if there's more than one location expression?
 			loc_expr = loc_exprs.at(0);
 			found = true;
 			break;
@@ -330,7 +331,18 @@ void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 	}
 
 	// If no results were found for the specified variable name, return
-	if (!found) return;
+	if (!found)
+	{
+		value_msg->value = "Variable not found";
+		return;
+	}
+
+	// TESTING: Check if the variable is within scope
+	if (!isWithinScope(*(loc_expr.die.get())))
+	{
+		value_msg->value = "Variable not in scope";
+		return;
+	}
 
 	// Get the address of the variable in the target process' memory
 	DwarfExprInterpreter interpreter(target_pid);
@@ -356,4 +368,45 @@ void ProcessDebugger::getStackTrace(GetStackTraceMessage *stack_msg)
 	Unwinder unwinder(target_pid);
 	stack_msg->stack = unwinder.traceStack();
 	unwinder.reset();
+}
+
+// Backtracks up the DIE tree from the specified DIE until the first
+// subprogram DIE is found, then check if the IP falls within this
+// subprogram's address range.
+// Also checks for global variables by looking at the base of the DIE tree.
+bool ProcessDebugger::isWithinScope(DebuggingInformationEntry &die)
+{
+	user_regs_struct regs;
+	ptrace(PTRACE_GETREGS, target_pid, 0, &regs);
+
+	// Check if the variable is in global scope first by checking if the parent
+	// DIE is the root DIE.
+	DIECompileUnit *compile_unit = dynamic_cast<DIECompileUnit *>(die.getParent());
+	if (compile_unit != nullptr)
+		return true;
+
+	// Navigate up the tree until the first subprogram is found
+	DebuggingInformationEntry *temp_die = &die;
+	while (temp_die != nullptr)
+	{
+		DIESubprogram *subprogram = dynamic_cast<DIESubprogram *>(temp_die);
+		if (subprogram != nullptr)
+		{
+			// If the IP register falls into the subprogram's address range
+			if (regs.rip >= subprogram->lowpc &&
+			    regs.rip < (subprogram->lowpc + subprogram->highpc))
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		else
+		{
+			temp_die = temp_die->getParent();
+		}
+	}
+	return false;
 }
