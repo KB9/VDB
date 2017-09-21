@@ -349,18 +349,24 @@ void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 	uint64_t address = interpreter.parse(&loc_expr.frame_base,
 	                                     loc_expr.location_op,
 	                                     loc_expr.location_param);
+	if (address > 0)
+	{
+		procmsg("[GET_VALUE] Found variable address: 0x%x\n", address);
 
-	procmsg("[GET_VALUE] Found variable address: 0x%x\n", address);
+		// Initialize the value deducer
+		ValueDeducer deducer(target_pid, debug_data);
+		std::string value;
 
-	// Initialize the value deducer
-	ValueDeducer deducer(target_pid, debug_data);
-	std::string value;
+		procmsg("[GET_VALUE] DWARF variable type offset: 0x%llx\n", loc_expr.type_die_offset);
 
-	procmsg("[GET_VALUE] DWARF variable type offset: 0x%llx\n", loc_expr.type_die_offset);
-
-	// Get the relevant type DIE and deduce the value of the variable
-	DebuggingInformationEntry *type_die = debug_data->info()->getDIEByOffset(loc_expr.type_die_offset).get();
-	value_msg->value = deducer.deduce(address, *type_die);
+		// Get the relevant type DIE and deduce the value of the variable
+		DebuggingInformationEntry *type_die = debug_data->info()->getDIEByOffset(loc_expr.type_die_offset).get();
+		value_msg->value = deducer.deduce(address, *type_die);
+	}
+	else
+	{
+		value_msg->value = "Variable not locatable";
+	}
 }
 
 void ProcessDebugger::getStackTrace(GetStackTraceMessage *stack_msg)
