@@ -1,4 +1,6 @@
-#include <QtWidgets>
+#include <QFileInfo>
+#include <QTextStream>
+#include <QPainter>
 
 #include "codeeditor.h"
 #include "linenumberarea.h"
