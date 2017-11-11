@@ -48,6 +48,7 @@ LIBS += -L"../../bin/core" -lvdb
 INCLUDEPATH += "../core/"
 INCLUDEPATH += "/usr/include/libdwarf/"
 
+QMAKE_CXXFLAGS += -std=c++14
 CONFIG += c++14
 
 DESTDIR = ../../bin/ui
