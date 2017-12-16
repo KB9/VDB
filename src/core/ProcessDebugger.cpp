@@ -7,6 +7,42 @@
 #include "Unwinder.hpp"
 
 #include <cstring>
+#include <cassert>
+
+void printProcessSignal(int signal)
+{
+	switch (signal)
+	{
+		case SIGABRT: procmsg("Process abort (SIGABRT)\n"); break;
+		case SIGALRM: procmsg("Alarm clock (SIGALRM)\n"); break;
+		case SIGFPE: procmsg("Erroneous arithmetic operation (SIGFPE)\n"); break;
+		case SIGHUP: procmsg("Hangup (SIGHUP)\n"); break;
+		case SIGILL: procmsg("Illegal instruction (SIGILL)\n"); break;
+		case SIGINT: procmsg("Terminal interrupt signal (SIGINT)\n"); break;
+		case SIGKILL: procmsg("Kill (SIGKILL)\n"); break;
+		case SIGPIPE: procmsg("Write on a pipe with no one to read it (SIGPIPE)\n"); break;
+		case SIGQUIT: procmsg("Terminal quit signal (SIGQUIT)\n"); break;
+		case SIGSEGV: procmsg("Invalid memory reference (SIGSEGV)\n"); break;
+		case SIGTERM: procmsg("Termination signal (SIGTERM)\n"); break;
+		case SIGUSR1: procmsg("User-defined signal 1 (SIGUSR1)\n"); break;
+		case SIGUSR2: procmsg("User-defined signal 2 (SIGUSR2)\n"); break;
+		case SIGCHLD: procmsg("Child process terminated or stopped (SIGCHLD)\n"); break;
+		case SIGCONT: procmsg("Continue executing, if stopped (SIGCONT)\n"); break;
+		case SIGSTOP: procmsg("Stop executing (SIGSTOP)\n"); break;
+		case SIGTSTP: procmsg("Terminal stop signal (SIGTSTP)\n"); break;
+		case SIGTTIN: procmsg("Background process attempting read (SIGTTIN)\n"); break;
+		case SIGTTOU: procmsg("Background process attempting write (SIGTTOU)\n"); break;
+		case SIGBUS: procmsg("Access to an undefined portion of a memory object (SIGBUS)\n"); break;
+		case SIGPOLL: procmsg("Pollable event (SIGPOLL)\n"); break;
+		case SIGPROF: procmsg("Profiling timer expired (SIGPROF)\n"); break;
+		case SIGSYS: procmsg("Bad system call (SIGSYS)\n"); break;
+		case SIGURG: procmsg("High bandwidth data is available at a socket (SIGURG)\n"); break;
+		case SIGVTALRM: procmsg("Virtual timer expired (SIGVTALRM)\n"); break;
+		case SIGXCPU: procmsg("CPU time limit exceeded (SIGXCPU)\n"); break;
+		case SIGXFSZ: procmsg("File size limit exceeded (SIGXFSZ)\n"); break;
+		default: procmsg("UNKNOWN\n");
+	}
+}
 
 ProcessDebugger::ProcessDebugger(const std::string& executable_name,
                                  std::shared_ptr<BreakpointTable> breakpoint_table,
@@ -153,39 +189,8 @@ bool ProcessDebugger::runDebugger()
 			}
 			else
 			{
-				//procmsg("[DEBUG] Child process stopped - unknown signal! (%d)\n", last_sig);
 				procmsg("[DEBUG] Child process stopped: ");
-				switch (last_sig)
-				{
-					case SIGABRT: procmsg("Process abort (SIGABRT)\n"); break;
-					case SIGALRM: procmsg("Alarm clock (SIGALRM)\n"); break;
-					case SIGFPE: procmsg("Erroneous arithmetic operation (SIGFPE)\n"); break;
-					case SIGHUP: procmsg("Hangup (SIGHUP)\n"); break;
-					case SIGILL: procmsg("Illegal instruction (SIGILL)\n"); break;
-					case SIGINT: procmsg("Terminal interrupt signal (SIGINT)\n"); break;
-					case SIGKILL: procmsg("Kill (SIGKILL)\n"); break;
-					case SIGPIPE: procmsg("Write on a pipe with no one to read it (SIGPIPE)\n"); break;
-					case SIGQUIT: procmsg("Terminal quit signal (SIGQUIT)\n"); break;
-					case SIGSEGV: procmsg("Invalid memory reference (SIGSEGV)\n"); break;
-					case SIGTERM: procmsg("Termination signal (SIGTERM)\n"); break;
-					case SIGUSR1: procmsg("User-defined signal 1 (SIGUSR1)\n"); break;
-					case SIGUSR2: procmsg("User-defined signal 2 (SIGUSR2)\n"); break;
-					case SIGCHLD: procmsg("Child process terminated or stopped (SIGCHLD)\n"); break;
-					case SIGCONT: procmsg("Continue executing, if stopped (SIGCONT)\n"); break;
-					case SIGSTOP: procmsg("Stop executing (SIGSTOP)\n"); break;
-					case SIGTSTP: procmsg("Terminal stop signal (SIGTSTP)\n"); break;
-					case SIGTTIN: procmsg("Background process attempting read (SIGTTIN)\n"); break;
-					case SIGTTOU: procmsg("Background process attempting write (SIGTTOU)\n"); break;
-					case SIGBUS: procmsg("Access to an undefined portion of a memory object (SIGBUS)\n"); break;
-					case SIGPOLL: procmsg("Pollable event (SIGPOLL)\n"); break;
-					case SIGPROF: procmsg("Profiling timer expired (SIGPROF)\n"); break;
-					case SIGSYS: procmsg("Bad system call (SIGSYS)\n"); break;
-					case SIGURG: procmsg("High bandwidth data is available at a socket (SIGURG)\n"); break;
-					case SIGVTALRM: procmsg("Virtual timer expired (SIGVTALRM)\n"); break;
-					case SIGXCPU: procmsg("CPU time limit exceeded (SIGXCPU)\n"); break;
-					case SIGXFSZ: procmsg("File size limit exceeded (SIGXFSZ)\n"); break;
-					default: procmsg("UNKNOWN\n");
-				}
+				printProcessSignal(last_sig);
 
 				// TODO: Check for other signal types
 				// TODO: Continue debugging instead of exiting debug loop
@@ -199,6 +204,73 @@ bool ProcessDebugger::runDebugger()
 	message_queue_out.push(std::make_unique<TargetExitMessage>());
 
 	return true;
+}
+
+void ProcessDebugger::processMessageQueue()
+{
+	while (!message_queue_in.empty())
+	{
+		std::unique_ptr<DebugMessage> msg = message_queue_in.tryPop();
+		if (msg == nullptr) continue;
+
+		GetValueMessage *value_msg = dynamic_cast<GetValueMessage *>(msg.get());
+		if (value_msg != nullptr)
+			deduceValue(value_msg);
+
+		GetStackTraceMessage *stack_msg = dynamic_cast<GetStackTraceMessage *>(msg.get());
+		if (stack_msg != nullptr)
+			getStackTrace(stack_msg);
+
+		message_queue_out.push(std::move(msg));
+	}
+}
+
+void ProcessDebugger::broadcastBreakpointHit(const std::string &file_name,
+                                             uint64_t line_number)
+{
+	// Notify the frontend that a breakpoint has been hit
+	auto bph_msg = std::make_unique<BreakpointHitMessage>();
+	bph_msg->line_number = line_number;
+	bph_msg->file_name = file_name;
+	message_queue_out.push(std::move(bph_msg));
+}
+
+void ProcessDebugger::broadcastStep(const std::string &file_name,
+                                    uint64_t line_number)
+{
+	// Notify the frontend that a program step has been performed
+	auto step_msg = std::make_unique<StepMessage>();
+	step_msg->line_number = line_number;
+	step_msg->file_name = file_name;
+	message_queue_out.push(std::move(step_msg));
+}
+
+void ProcessDebugger::performStep(StepCursor &cursor, BreakpointAction action)
+{
+	// Perform the step action
+	switch (action)
+	{
+		case STEP_OVER:
+		{
+			cursor.stepOver(target_pid);
+			break;
+		}
+		case STEP_INTO:
+		{
+			cursor.stepInto(target_pid);
+			break;
+		}
+		case STEP_OUT:
+		{
+			cursor.stepOut(target_pid);
+			break;
+		}
+		default:
+			break;
+	}
+
+	// Report to the frontend message receiver
+	broadcastStep(cursor.getCurrentSourceFile(), cursor.getCurrentLineNumber());
 }
 
 void ProcessDebugger::onBreakpointHit()
@@ -218,69 +290,23 @@ void ProcessDebugger::onBreakpointHit()
 	procmsg("[BREAKPOINT_ACTION] Waiting for breakpoint action...\n");
 
 	// Notify the frontend that a breakpoint has been hit
-	auto bph_msg = std::make_unique<BreakpointHitMessage>();
-	bph_msg->line_number = breakpoint->line_number;
-	bph_msg->file_name = breakpoint->file_name;
-	message_queue_out.push(std::move(bph_msg));
+	broadcastBreakpointHit(breakpoint->file_name, breakpoint->line_number);
+
+	// Create the step cursor at the address the program is currently stopped at
+	StepCursor step_cursor(breakpoint_address, debug_data, breakpoint_table);
 
 	// Wait until an action is taken for this particular breakpoint
 	std::unique_lock<std::mutex> lck(mtx);
 	while (breakpoint_action != CONTINUE)
 	{
 		// Process the incoming message queue
-		while (!message_queue_in.empty())
-		{
-			std::unique_ptr<DebugMessage> msg = message_queue_in.tryPop();
-			if (msg == nullptr) continue;
-
-			GetValueMessage *value_msg = dynamic_cast<GetValueMessage *>(msg.get());
-			if (value_msg != nullptr)
-				deduceValue(value_msg);
-
-			GetStackTraceMessage *stack_msg = dynamic_cast<GetStackTraceMessage *>(msg.get());
-			if (stack_msg != nullptr)
-				getStackTrace(stack_msg);
-
-			message_queue_out.push(std::move(msg));
-		}
+		processMessageQueue();
 
 		// Perform any stepping actions required
 		if (breakpoint_action == STEP_OVER || breakpoint_action == STEP_INTO ||
 		    breakpoint_action == STEP_OUT)
 		{
-			// Initialize the step cursor if it hasn't already been initialized
-			if (step_cursor == nullptr)
-				step_cursor = std::make_unique<StepCursor>(breakpoint_address,
-				                                           debug_data,
-				                                           breakpoint_table);
-
-			// Perform the step action
-			switch (breakpoint_action)
-			{
-				case STEP_OVER:
-				{
-					step_cursor->stepOver(target_pid);
-					break;
-				}
-				case STEP_INTO:
-				{
-					step_cursor->stepInto(target_pid);
-					break;
-				}
-				case STEP_OUT:
-				{
-					step_cursor->stepOut(target_pid);
-					break;
-				}
-				default:
-					break;
-			}
-
-			// Report to the frontend message receiver
-			auto step_msg = std::make_unique<StepMessage>();
-			step_msg->line_number = step_cursor->getCurrentLineNumber();
-			step_msg->file_name = step_cursor->getCurrentSourceFile();
-			message_queue_out.push(std::move(step_msg));
+			performStep(step_cursor, breakpoint_action);
 		}
 
 		// Reset the breakpoint action
@@ -290,24 +316,12 @@ void ProcessDebugger::onBreakpointHit()
 		cv.wait(lck);
 	}
 
-	// The continue breakpoint action has been selected at this point
-
-	// If the step cursor hasn't been initialized, it was never used therefore
-	// we are still on the same breakpoint that it originally stopped on.
-	if (step_cursor == nullptr)
-	{
-		breakpoint->stepOver(target_pid);
-	}
-	else
-	{
-		// If the step cursor is current stopped on a user breakpoint, step over
-		// it first and then destroy the step cursor
-		std::unique_ptr<Breakpoint> user_bp =
-			breakpoint_table->getBreakpoint(step_cursor->getCurrentAddress());
-		if (user_bp != nullptr)
-			user_bp->stepOver(target_pid);
-		step_cursor = nullptr;
-	}
+	// If the step cursor is currently stopped on a user breakpoint, step over
+	// it first to execute the instruction before continuing
+	std::unique_ptr<Breakpoint> user_bp =
+		breakpoint_table->getBreakpoint(step_cursor.getCurrentAddress());
+	if (user_bp != nullptr)
+		user_bp->stepOver(target_pid);
 
 	// Reset the breakpoint action
 	breakpoint_action = UNDEFINED;

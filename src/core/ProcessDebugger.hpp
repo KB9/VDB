@@ -118,10 +118,12 @@ private:
 	bool runDebugger();
 
 	void onBreakpointHit();
+	void processMessageQueue();
+	void broadcastBreakpointHit(const std::string &file_name, uint64_t line_number);
+	void performStep(StepCursor &cursor, BreakpointAction action);
+	void broadcastStep(const std::string &file_name, uint64_t line_number);
 
 	void deduceValue(GetValueMessage *value_msg);
 	void getStackTrace(GetStackTraceMessage *stack_msg);
 	bool isWithinScope(DebuggingInformationEntry &die);
-
-	std::unique_ptr<StepCursor> step_cursor = nullptr;
 };
