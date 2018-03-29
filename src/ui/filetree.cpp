@@ -10,17 +10,26 @@ FileTree::FileTree(QWidget *parent) : QTreeWidget(parent)
     setColumnCount(1);
 }
 
-void FileTree::populate(std::vector<CUHeader> &cu_headers)
-{
-    for (CUHeader &header : cu_headers)
-    {
-        QString filename = QString(header.root_die->getName().c_str());
-        QString directory = QString(header.root_die->getCompDir().c_str());
-        QString absPath = directory + '/' + filename;
-        QStringList pathParts = absPath.split('/', QString::SkipEmptyParts);
+// void FileTree::populate(std::vector<CUHeader> &cu_headers)
+// {
+//     for (CUHeader &header : cu_headers)
+//     {
+//         QString filename = QString(header.root_die->getName().c_str());
+//         QString directory = QString(header.root_die->getCompDir().c_str());
+//         QString absPath = directory + '/' + filename;
+//         QStringList pathParts = absPath.split('/', QString::SkipEmptyParts);
 
-        insertFile(pathParts, this->invisibleRootItem());
-    }
+//         insertFile(pathParts, this->invisibleRootItem());
+//     }
+// }
+void FileTree::populate()
+{
+    QString filename = QString("test.cpp");
+    QString directory = QString("/home/kavan");
+    QString absPath = directory + '/' + filename;
+    QStringList pathParts = absPath.split('/', QString::SkipEmptyParts);
+
+    insertFile(pathParts, this->invisibleRootItem());
 }
 
 void FileTree::insertFile(QStringList path_parts, QTreeWidgetItem *item)

@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 
-#include "dwarf/DebuggingInformationEntry.hpp"
-#include "dwarf/DIESubprogram.hpp"
+// #include "dwarf/DebuggingInformationEntry.hpp"
+// #include "dwarf/DIESubprogram.hpp"
 #include "dwarf/DebugLine.hpp"
 #include "dwarf/DwarfDebug.hpp"
 #include "BreakpointTable.hpp"
@@ -44,7 +44,8 @@ private:
 	uint64_t stepToNextSourceLine(pid_t pid, uint64_t addr,
 	                              bool include_current_addr = false);
 	uint64_t stepToCallingFunction(pid_t pid, uint64_t addr);
-	DIESubprogram *getSubprogramFromAddress(uint64_t address);
+	// DIESubprogram *getSubprogramFromAddress(uint64_t address);
+	std::unique_ptr<DIE> getSubprogramFromAddress(uint64_t address);
 	std::unique_ptr<BreakpointTable> createSubprogramBreakpoints(pid_t pid,
 	                                                             uint64_t addr,
 	                                                             bool include_current_addr);

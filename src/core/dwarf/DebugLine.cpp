@@ -3,7 +3,8 @@
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
-DebugLine::DebugLine(DIECompileUnit &compile_unit_die)
+// DebugLine::DebugLine(DIECompileUnit &compile_unit_die)
+DebugLine::DebugLine(DIE &compile_unit_die)
 {
 	/*
 	TODO:
@@ -18,7 +19,7 @@ DebugLine::DebugLine(DIECompileUnit &compile_unit_die)
 
 	// Get the source lines from the specified compilation unit
 	int result = dwarf_srclines(
-		compile_unit_die.getInternalDie(),
+		compile_unit_die.die,
 		&line_buffer,
 		&line_count,
 		&err);

@@ -6,7 +6,7 @@
 
 #include "filetabs.h"
 
-#include "dwarf/CUHeader.hpp"
+// #include "dwarf/CUHeader.hpp"
 
 class FileTree : public QTreeWidget
 {
@@ -15,7 +15,8 @@ class FileTree : public QTreeWidget
 public:
     FileTree(QWidget *parent = 0);
 
-    void populate(std::vector<CUHeader> &cu_headers);
+    // void populate(std::vector<CUHeader> &cu_headers);
+    void populate();
 
 signals:
     void onFileSelected(QString filepath);

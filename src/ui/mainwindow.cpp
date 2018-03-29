@@ -8,7 +8,7 @@
 
 #include "codeeditor.h"
 
-#include "dwarf/CUHeader.hpp"
+// #include "dwarf/CUHeader.hpp"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -135,7 +135,8 @@ void MainWindow::importExecutable()
 
     // Find the associated source files
     std::shared_ptr<DwarfDebug> dwarf = vdb->getDwarfDebugData();
-    ui->fileTreeWidget->populate(dwarf->info()->getCUHeaders());
+    // ui->fileTreeWidget->populate(dwarf->info()->getCUHeaders());
+    ui->fileTreeWidget->populate();
 
     // Enable the debugging button once the executable's source is loaded
     setDebugButtonEnabled(true);
