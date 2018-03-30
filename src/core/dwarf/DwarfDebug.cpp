@@ -24,7 +24,7 @@ DwarfDebug::DwarfDebug(std::string filename)
 	// debug_info = std::make_shared<DebugInfo>(dbg);
 	debug_info = std::make_shared<DwarfInfoReader>(dbg);
 	// debug_line = std::make_shared<DebugLine>(*(debug_info->getCUHeaders()[0].root_die)); // TODO: Get the first compile unit DIE using the new reader
-	debug_line = std::make_shared<DebugLine>(*(debug_info->getCompileUnit("test.cpp")));
+	debug_line = std::make_shared<DebugLine>(debug_info->getCompileUnits()[0]);
 	debug_aranges = std::make_shared<DebugAddressRanges>(dbg);
 }
 
@@ -56,4 +56,28 @@ std::shared_ptr<DebugLine> DwarfDebug::line()
 std::shared_ptr<DebugAddressRanges> DwarfDebug::aranges()
 {
 	return debug_aranges;
+}
+
+std::vector<SourceFile> sourceFiles(std::shared_ptr<DwarfDebug> debug_data)
+{
+	std::vector<SourceFile> files;
+
+	std::vector<DIE> compile_units = debug_data->info()->getCompileUnits();
+	for (auto &cu : compile_units)
+	{
+		SourceFile file;
+
+		// Loop through its attributes until its name is found
+		const std::vector<Attribute> cu_attrs = cu.getAttributes();
+		for (const Attribute &attr : cu_attrs)
+		{
+			if (attr.getCode() == DW_AT_name)
+				file.name = attr.getString();
+			if (attr.getCode() == DW_AT_comp_dir)
+				file.dir = attr.getString();
+		}
+
+		files.push_back(file);
+	}
+	return files;
 }

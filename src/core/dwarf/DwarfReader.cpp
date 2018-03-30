@@ -306,110 +306,35 @@ DwarfInfoReader::DwarfInfoReader(const Dwarf_Debug &dbg)
 	this->dbg = dbg;
 }
 
-std::unique_ptr<DIE> DwarfInfoReader::getCompileUnit(std::string cu_name)
+std::vector<DIE> DwarfInfoReader::getCompileUnits()
 {
-	// NOTE: I need to call this first as the subsequent siblingof will not work
-	// without it. This is because libdwarf is a state machine.
+	std::vector<DIE> compile_units;
+
+	// Iterate over all compilation unit headers until the end is reached
 	Dwarf_Unsigned cu_header_length, abbrev_offset, next_cu_header;
 	Dwarf_Half version_stamp, address_size;
 	Dwarf_Error err;
-	int result = dwarf_next_cu_header(
-	            dbg,
-		        &cu_header_length,
-		        &version_stamp,
-		        &abbrev_offset,
-		        &address_size,
-		        &next_cu_header,
-		        &err);
-
-	Dwarf_Die prev_die = 0, current_die;
-	result = dwarf_siblingof(dbg, prev_die, &current_die, &err);
+	int result = dwarf_next_cu_header(dbg, &cu_header_length, &version_stamp,
+	                                  &abbrev_offset, &address_size,
+	                                  &next_cu_header, &err);
 	while (result == DW_DLV_OK)
 	{
-		// Get the compilation unit DIE
-		// DIE cu_die(dbg, current_die);
-		auto cu = std::make_unique<DIE>(dbg, current_die);
-
-		// Loop through its attributes until its name is found
-		const std::vector<Attribute> cu_attrs = cu->getAttributes();
-		for (const Attribute &attr : cu_attrs)
+		// Find the compilation unit associated with this header
+		Dwarf_Die no_die = 0, current_die;
+		result = dwarf_siblingof(dbg, no_die, &current_die, &err);
+		if (result == DW_DLV_OK)
 		{
-			// Find the CU DIE's name attribute and check its value against
-			// the specified name
-			if (attr.getCode() == DW_AT_name && attr.getString() == cu_name)
-			{
-				// return std::make_unique<DIE>(cu_die);
-				return std::move(cu);
-			}
-		}
+			// If the compilation unit was found, add it to the list
+			auto cu = std::make_unique<DIE>(dbg, current_die);
+			compile_units.push_back(*cu);
 
-		// Assign the current DIE as the previous, in order to get the next
-		// sibling CU DIE.
-		prev_die = current_die;
-		result = dwarf_siblingof(dbg, prev_die, &current_die, &err);
+			result = dwarf_next_cu_header(dbg, &cu_header_length, &version_stamp,
+			                              &abbrev_offset, &address_size,
+			                              &next_cu_header, &err);
+		}
 	}
 
-	// Report the error if one was encountered during the loop
-	if (result == DW_DLV_ERROR)
-		procmsg("[DWARF_ERROR] Error getting sibling of CU! %s\n", dwarf_errmsg(err));
-
-	// TODO: AT LEAST RETURN SOMETHING HERE!!!
-	return nullptr;
-}
-
-std::unique_ptr<DIE> DwarfInfoReader::getCompileUnit(uint64_t address)
-{
-	// NOTE: I need to call this first as the subsequent siblingof will not work
-	// without it. This is because libdwarf is a state machine.
-	Dwarf_Unsigned cu_header_length, abbrev_offset, next_cu_header;
-	Dwarf_Half version_stamp, address_size;
-	Dwarf_Error err;
-	int result = dwarf_next_cu_header(
-	            dbg,
-		        &cu_header_length,
-		        &version_stamp,
-		        &abbrev_offset,
-		        &address_size,
-		        &next_cu_header,
-		        &err);
-
-	Dwarf_Die prev_die = 0, current_die;
-	result = dwarf_siblingof(dbg, prev_die, &current_die, &err);
-	while (result == DW_DLV_OK)
-	{
-		// Get the compilation unit DIE
-		// DIE cu_die(dbg, current_die);
-		auto cu = std::make_unique<DIE>(dbg, current_die);
-
-		// Loop through its attributes until its high pc and low pc is found
-		uint64_t low_pc, high_pc;
-		const std::vector<Attribute> cu_attrs = cu->getAttributes();
-		for (const Attribute &attr : cu_attrs)
-		{
-			if (attr.getCode() == DW_AT_low_pc)
-				low_pc = attr.getAddress();
-			else if (attr.getCode() == DW_AT_high_pc)
-				high_pc = attr.getAddress();
-		}
-
-		// If the specified address is within the CU's address range, return
-		// the CU DIE.
-		if (address >= low_pc && address < (low_pc + high_pc))
-			// return cu_die;
-			return std::move(cu);
-
-		// Assign the current DIE as the previous, in order to get the next
-		// sibling CU DIE.
-		prev_die = current_die;
-		result = dwarf_siblingof(dbg, prev_die, &current_die, &err);
-	}
-
-	// Report the error if one was encountered during the loop
-	if (result == DW_DLV_ERROR)
-		procmsg("[DWARF_ERROR] Error getting sibling of CU! %s\n", dwarf_errmsg(err));
-
-	// TODO: AT LEAST RETURN SOMETHING HERE!!!
-	return nullptr;
+	return compile_units;
 }
 
 std::unique_ptr<DIE> DwarfInfoReader::getDIEByOffset(Dwarf_Off offset)

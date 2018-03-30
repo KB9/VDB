@@ -115,8 +115,7 @@ class DwarfInfoReader
 public:
 	DwarfInfoReader(const Dwarf_Debug &dbg);
 
-	std::unique_ptr<DIE> getCompileUnit(std::string cu_name);
-	std::unique_ptr<DIE> getCompileUnit(uint64_t address);
+	std::vector<DIE> getCompileUnits();
 
 	std::unique_ptr<DIE> getDIEByOffset(Dwarf_Off offset);
 

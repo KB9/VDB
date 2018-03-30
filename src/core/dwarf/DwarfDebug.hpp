@@ -35,3 +35,11 @@ private:
 	std::shared_ptr<DebugLine> debug_line = nullptr;
 	std::shared_ptr<DebugAddressRanges> debug_aranges = nullptr;
 };
+
+struct SourceFile
+{
+	std::string name;
+	std::string dir;
+};
+
+std::vector<SourceFile> sourceFiles(std::shared_ptr<DwarfDebug> debug_data);
