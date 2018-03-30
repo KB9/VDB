@@ -380,6 +380,27 @@ std::vector<DIE> DwarfInfoReader::getDIEsByTag(const std::string &tag)
 	return results;
 }
 
+std::vector<DIE> DwarfInfoReader::getDIEsByName(const std::string &name)
+{
+	std::vector<DIE> results;
+
+	std::vector<DIE> compile_units = getCompileUnits();
+	for (auto &cu : compile_units)
+	{
+		std::vector<DIE> all_children = getChildrenRecursive(cu);
+		for (auto &child : all_children)
+		{
+			std::vector<Attribute> child_attrs = child.getAttributes();
+			for (auto &attr : child_attrs)
+			{
+				if (attr.getCode() == DW_AT_name && attr.getString() == name)
+					results.push_back(child);
+			}
+		}
+	}
+	return results;
+}
+
 std::vector<DIE> DwarfInfoReader::getChildrenRecursive(DIE &die)
 {
 	std::vector<DIE> children = die.getChildren();

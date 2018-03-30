@@ -121,6 +121,7 @@ public:
 	std::unique_ptr<DIE> getDIEByOffset(Dwarf_Off offset);
 
 	std::vector<DIE> getDIEsByTag(const std::string &tag);
+	std::vector<DIE> getDIEsByName(const std::string &name);
 	std::vector<DIE> getChildrenRecursive(DIE &die);
 
 private:
