@@ -107,6 +107,19 @@ private:
 	void setTagName();
 };
 
+class DIEMatcher
+{
+public:
+	DIEMatcher &setTags(const std::vector<std::string> &tags);
+	DIEMatcher &setAttrCodes(const std::vector<Dwarf_Half> &attr_codes);
+
+	bool matches(DIE &die);
+
+private:
+	std::vector<std::string> tags;
+	std::vector<Dwarf_Half> attr_codes;
+};
+
 // This will contain the compilation units, and allow access to each of them.
 // A compilation unit has a specific address range, and I could perhaps narrow
 // the search for a variable by looking at the high and low PC values for each
@@ -120,8 +133,7 @@ public:
 
 	std::unique_ptr<DIE> getDIEByOffset(Dwarf_Off offset);
 
-	std::vector<DIE> getDIEsByTag(const std::string &tag);
-	std::vector<DIE> getDIEsByName(const std::string &name);
+	std::vector<DIE> getDIEs(DIEMatcher &matcher);
 	std::vector<DIE> getChildrenRecursive(DIE &die);
 
 private:

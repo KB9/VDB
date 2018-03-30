@@ -1,6 +1,7 @@
 #include "DwarfReader.hpp"
 
 #include <cassert>
+#include <algorithm>
 
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
@@ -307,6 +308,42 @@ void DIE::setTagName()
 }
 
 // =============================================================================
+// DIEMatcher
+// =============================================================================
+
+DIEMatcher &DIEMatcher::setTags(const std::vector<std::string> &tags)
+{
+	this->tags = tags;
+	return *this;
+}
+
+DIEMatcher &DIEMatcher::setAttrCodes(const std::vector<Dwarf_Half> &attr_codes)
+{
+	this->attr_codes = attr_codes;
+	return *this;
+}
+
+bool DIEMatcher::matches(DIE &die)
+{
+	auto tag_it = std::find(std::begin(tags), std::end(tags), die.getTagName());
+	bool is_tag_match = tag_it != std::end(tags);
+
+	bool is_code_match = false;
+	std::vector<Attribute> attrs = die.getAttributes();
+	for (const auto &attr : attrs)
+	{
+		auto code_it = std::find(std::begin(attr_codes), std::end(attr_codes), attr.getCode());
+		if (code_it != std::end(attr_codes))
+		{
+			is_code_match = true;
+			break;
+		}
+	}
+
+	return (tags.empty() || is_tag_match) && (attr_codes.empty() || is_code_match);
+}
+
+// =============================================================================
 // DwarfInfoReader
 // =============================================================================
 
@@ -361,7 +398,7 @@ std::unique_ptr<DIE> DwarfInfoReader::getDIEByOffset(Dwarf_Off offset)
 	}
 }
 
-std::vector<DIE> DwarfInfoReader::getDIEsByTag(const std::string &tag)
+std::vector<DIE> DwarfInfoReader::getDIEs(DIEMatcher &matcher)
 {
 	std::vector<DIE> results;
 
@@ -371,31 +408,8 @@ std::vector<DIE> DwarfInfoReader::getDIEsByTag(const std::string &tag)
 		std::vector<DIE> all_children = getChildrenRecursive(cu);
 		for (auto &child : all_children)
 		{
-			if (child.getTagName() == tag)
-			{
+			if (matcher.matches(child))
 				results.push_back(child);
-			}
-		}
-	}
-	return results;
-}
-
-std::vector<DIE> DwarfInfoReader::getDIEsByName(const std::string &name)
-{
-	std::vector<DIE> results;
-
-	std::vector<DIE> compile_units = getCompileUnits();
-	for (auto &cu : compile_units)
-	{
-		std::vector<DIE> all_children = getChildrenRecursive(cu);
-		for (auto &child : all_children)
-		{
-			std::vector<Attribute> child_attrs = child.getAttributes();
-			for (auto &attr : child_attrs)
-			{
-				if (attr.getCode() == DW_AT_name && attr.getString() == name)
-					results.push_back(child);
-			}
 		}
 	}
 	return results;
