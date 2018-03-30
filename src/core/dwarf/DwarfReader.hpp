@@ -94,6 +94,7 @@ public:
 	DIE *getParent();
 	std::vector<DIE> getChildren();
 	std::string getTagName();
+	Dwarf_Off getOffset();
 
 	Dwarf_Die die; // NOTE: TEMPORARILY PUBLIC FOR TESTING/DEBUG PURPOSES
 

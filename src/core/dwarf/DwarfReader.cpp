@@ -280,6 +280,15 @@ std::string DIE::getTagName()
 	return tag_name;
 }
 
+Dwarf_Off DIE::getOffset()
+{
+	Dwarf_Off offset;
+	Dwarf_Error err;
+	if (dwarf_dieoffset(die, &offset, &err) != DW_DLV_OK)
+		procmsg("[DWARF_ERROR] Error in dwarf_dieoffset!\n");
+	return offset;
+}
+
 void DIE::setTagName()
 {
 	const char *tag_name = 0;
