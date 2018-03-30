@@ -135,8 +135,7 @@ void MainWindow::importExecutable()
 
     // Find the associated source files
     std::shared_ptr<DwarfDebug> dwarf = vdb->getDwarfDebugData();
-    // ui->fileTreeWidget->populate(dwarf->info()->getCUHeaders());
-    ui->fileTreeWidget->populate();
+    ui->fileTreeWidget->populate(sourceFiles(dwarf));
 
     // Enable the debugging button once the executable's source is loaded
     setDebugButtonEnabled(true);
