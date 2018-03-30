@@ -360,3 +360,33 @@ std::unique_ptr<DIE> DwarfInfoReader::getDIEByOffset(Dwarf_Off offset)
 		return nullptr;
 	}
 }
+
+std::vector<DIE> DwarfInfoReader::getDIEsByTag(const std::string &tag)
+{
+	std::vector<DIE> results;
+
+	std::vector<DIE> compile_units = getCompileUnits();
+	for (auto &cu : compile_units)
+	{
+		std::vector<DIE> all_children = getChildrenRecursive(cu);
+		for (auto &child : all_children)
+		{
+			if (child.getTagName() == tag)
+			{
+				results.push_back(child);
+			}
+		}
+	}
+	return results;
+}
+
+std::vector<DIE> DwarfInfoReader::getChildrenRecursive(DIE &die)
+{
+	std::vector<DIE> children = die.getChildren();
+	for (auto &child : children)
+	{
+		std::vector<DIE> sub_children = child.getChildren();
+		children.insert(children.end(), sub_children.begin(), sub_children.end());
+	}
+	return children;
+}
