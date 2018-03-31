@@ -425,3 +425,76 @@ std::vector<DIE> DwarfInfoReader::getChildrenRecursive(DIE &die)
 	}
 	return children;
 }
+
+DwarfInfoReader::VariableLocExpr DwarfInfoReader::getVarLocExpr(const std::string &var_name)
+{
+	DwarfInfoReader::VariableLocExpr loc_expr;
+
+	DIEMatcher matcher;
+	matcher.setTags({"DW_TAG_subprogram"});
+
+	std::vector<DIE> subprograms = getDIEs(matcher);
+	for (auto &sub : subprograms)
+	{
+		// Get the frame base for this subprogram
+		std::vector<Attribute> attrs = sub.getAttributes();
+		for (auto &attr : attrs)
+		{
+			if (attr.getCode() == DW_AT_frame_base)
+			{
+				loc_expr.frame_base = ((uint8_t *)attr.getExprLoc().ptr)[0];
+				break;
+			}
+		}
+
+		// Check all of its children to check for a local variable with the
+		// name
+		std::vector<DIE> children = sub.getChildren();
+		for (auto &child : children)
+		{
+			// Only look at variables and formal parameters
+			if (child.getTagName() != "DW_TAG_variable" &&
+			    child.getTagName() != "DW_TAG_formal_parameter")
+				continue;
+
+			std::vector<Attribute> attrs = child.getAttributes();
+
+			// Look for the name of this DIE
+			bool name_matches = false;
+			for (auto &attr : attrs)
+			{
+				if (attr.getCode() == DW_AT_name)
+				{
+					name_matches = (attr.getString() == var_name);
+					break;
+				}
+			}
+
+			// Ensure that the name of this variable matches before getting the
+			// location expression
+			if (!name_matches)
+				continue;
+
+			for (auto &attr : attrs)
+			{
+				if (attr.getCode() == DW_AT_location)
+				{
+					loc_expr.location_op = ((uint8_t *)attr.getExprLoc().ptr)[0];
+					loc_expr.location_param = &((uint8_t *)attr.getExprLoc().ptr)[1];
+					break;
+				}
+			}
+
+			for (auto &attr : attrs)
+			{
+				if (attr.getCode() == DW_AT_type)
+				{
+					loc_expr.type = getDIEByOffset(attr.getOffset());
+					break;
+				}
+			}
+		}
+	}
+
+	return loc_expr;
+}

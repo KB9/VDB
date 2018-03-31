@@ -136,6 +136,15 @@ public:
 	std::vector<DIE> getDIEs(DIEMatcher &matcher);
 	std::vector<DIE> getChildrenRecursive(DIE &die);
 
+	struct VariableLocExpr
+	{
+		uint8_t frame_base;
+		uint8_t location_op;
+		uint8_t *location_param;
+		std::unique_ptr<DIE> type;
+	};
+	VariableLocExpr getVarLocExpr(const std::string &var_name);
+
 private:
 	Dwarf_Debug dbg;
 };

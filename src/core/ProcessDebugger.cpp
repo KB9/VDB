@@ -329,58 +329,20 @@ void ProcessDebugger::onBreakpointHit()
 
 void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 {
-	// // Get the first location expression for the specified variable name
-	// VariableLocExpr loc_expr;
-	// bool found = false;
-	// for (CUHeader header : debug_data->info()->getCUHeaders())
-	// {
-	// 	auto loc_exprs = header.getLocExprsFromVarName<DIEVariable>(value_msg->variable_name.c_str());
-	// 	if (loc_exprs.size() > 0)
-	// 	{
-	// 		// TODO: What happens if there's more than one location expression?
-	// 		loc_expr = loc_exprs.at(0);
-	// 		found = true;
-	// 		break;
-	// 	}
-	// }
-
-	// // If no results were found for the specified variable name, return
-	// if (!found)
-	// {
-	// 	value_msg->value = "Variable not found";
-	// 	return;
-	// }
-
-	// // TESTING: Check if the variable is within scope
-	// if (!isWithinScope(*(loc_expr.die.get())))
-	// {
-	// 	value_msg->value = "Variable not in scope";
-	// 	return;
-	// }
-
-	// // Get the address of the variable in the target process' memory
-	// DwarfExprInterpreter interpreter(target_pid);
-	// uint64_t address = interpreter.parse(&loc_expr.frame_base,
-	//                                      loc_expr.location_op,
-	//                                      loc_expr.location_param);
-	// if (address > 0)
-	// {
-	// 	procmsg("[GET_VALUE] Found variable address: 0x%x\n", address);
-
-	// 	// Initialize the value deducer
-	// 	ValueDeducer deducer(target_pid, debug_data);
-	// 	std::string value;
-
-	// 	procmsg("[GET_VALUE] DWARF variable type offset: 0x%llx\n", loc_expr.type_die_offset);
-
-	// 	// Get the relevant type DIE and deduce the value of the variable
-	// 	DebuggingInformationEntry *type_die = debug_data->info()->getDIEByOffset(loc_expr.type_die_offset).get();
-	// 	value_msg->value = deducer.deduce(address, *type_die);
-	// }
-	// else
-	// {
-	// 	value_msg->value = "Variable not locatable";
-	// }
+	auto loc_expr = debug_data->info()->getVarLocExpr(value_msg->variable_name);
+	DwarfExprInterpreter interpreter(target_pid);
+	uint64_t address = interpreter.parse(&loc_expr.frame_base,
+	                                     loc_expr.location_op,
+	                                     loc_expr.location_param);
+	if (address > 0)
+	{
+		ValueDeducer deducer(target_pid, debug_data);
+		value_msg->value = deducer.deduce(address, *(loc_expr.type));
+	}
+	else
+	{
+		value_msg->value = "Variable not locatable";
+	}
 }
 
 void ProcessDebugger::getStackTrace(GetStackTraceMessage *stack_msg)
