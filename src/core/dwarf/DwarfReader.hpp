@@ -91,6 +91,7 @@ public:
 	DIE(const Dwarf_Debug &dbg, const Dwarf_Die &die);
 
 	std::vector<Attribute> getAttributes();
+	Attribute getAttributeByCode(Dwarf_Half code);
 	DIE *getParent();
 	std::vector<DIE> getChildren();
 	std::string getTagName();

@@ -236,6 +236,17 @@ std::vector<Attribute> DIE::getAttributes()
 	return attributes;
 }
 
+Attribute DIE::getAttributeByCode(Dwarf_Half code)
+{
+	std::vector<Attribute> attrs = getAttributes();
+	for (auto &attr : attrs)
+	{
+		if (attr.getCode() == code)
+			return attr;
+	}
+	assert(false && "Not a valid attribute");
+}
+
 DIE *DIE::getParent()
 {
 	return parent;
@@ -437,15 +448,8 @@ DwarfInfoReader::VariableLocExpr DwarfInfoReader::getVarLocExpr(const std::strin
 	for (auto &sub : subprograms)
 	{
 		// Get the frame base for this subprogram
-		std::vector<Attribute> attrs = sub.getAttributes();
-		for (auto &attr : attrs)
-		{
-			if (attr.getCode() == DW_AT_frame_base)
-			{
-				loc_expr.frame_base = ((uint8_t *)attr.getExprLoc().ptr)[0];
-				break;
-			}
-		}
+		Attribute frame_base = sub.getAttributeByCode(DW_AT_frame_base);
+		loc_expr.frame_base = ((uint8_t *)frame_base.getExprLoc().ptr)[0];
 
 		// Check all of its children to check for a local variable with the
 		// name
@@ -457,42 +461,18 @@ DwarfInfoReader::VariableLocExpr DwarfInfoReader::getVarLocExpr(const std::strin
 			    child.getTagName() != "DW_TAG_formal_parameter")
 				continue;
 
-			std::vector<Attribute> attrs = child.getAttributes();
-
-			// Look for the name of this DIE
-			bool name_matches = false;
-			for (auto &attr : attrs)
-			{
-				if (attr.getCode() == DW_AT_name)
-				{
-					name_matches = (attr.getString() == var_name);
-					break;
-				}
-			}
-
 			// Ensure that the name of this variable matches before getting the
 			// location expression
-			if (!name_matches)
+			Attribute name = child.getAttributeByCode(DW_AT_name);
+			if (name.getString() != var_name)
 				continue;
 
-			for (auto &attr : attrs)
-			{
-				if (attr.getCode() == DW_AT_location)
-				{
-					loc_expr.location_op = ((uint8_t *)attr.getExprLoc().ptr)[0];
-					loc_expr.location_param = &((uint8_t *)attr.getExprLoc().ptr)[1];
-					break;
-				}
-			}
+			Attribute location = child.getAttributeByCode(DW_AT_location);
+			loc_expr.location_op = ((uint8_t *)location.getExprLoc().ptr)[0];
+			loc_expr.location_param = &((uint8_t *)location.getExprLoc().ptr)[1];
 
-			for (auto &attr : attrs)
-			{
-				if (attr.getCode() == DW_AT_type)
-				{
-					loc_expr.type = getDIEByOffset(attr.getOffset());
-					break;
-				}
-			}
+			Attribute type = child.getAttributeByCode(DW_AT_type);
+			loc_expr.type = getDIEByOffset(type.getOffset());
 		}
 	}
 
