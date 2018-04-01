@@ -188,40 +188,42 @@ std::string ValueDeducer::deduceReference(uint64_t address, const DIE &ref_die)
 
 std::string ValueDeducer::deduceArray(uint64_t address, DIE &array_die)
 {
+	assert(array_die.getTagName() == "DW_TAG_array_type");
+
 	// Get the type of the array
-	// // std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(array_die.getTypeOffset());
-	// std::unique_ptr<DIE> die = debug_data->info()->getDIEByOffset(array_die.getOffset());
-	// if (die == nullptr) return "Error getting array type";
-	// DIEBaseType *array_base_type_die = dynamic_cast<DIEBaseType *>(die.get());
+	Attribute type = array_die.getAttributeByCode(DW_AT_type);
+	DIE type_die = *(debug_data->info()->getDIEByOffset(type.getOffset()));
 
-	// // Find the subrange child DIE to determine the upper bound of the array
-	// uint64_t upper_bound = 0;
-	// auto child_ptrs = array_die.getChildren();
-	// for (auto child_ptr : child_ptrs)
-	// {
-	// 	if (child_ptr->getTagName() == "DW_TAG_subrange_type")
-	// 	{
-	// 		auto child = dynamic_cast<DIESubrangeType *>(child_ptr.get());
-	// 		upper_bound = child->getUpperBound();
-	// 		break;
-	// 	}
-	// }
+	// Find the subrange child DIE to determine the upper bound of the array
+	uint64_t array_length = 0;
+	bool found_array_length = false;
+	std::vector<DIE> children = array_die.getChildren();
+	for (auto &child : children)
+	{
+		if (child.getTagName() == "DW_TAG_subrange_type")
+		{
+			Attribute upper_bound = child.getAttributeByCode(DW_AT_upper_bound);
+			array_length = upper_bound.getUnsigned();
+			found_array_length = true;
+		}
+	}
+	if (!found_array_length) return "Could not determine array length";
 
-	// // Deduce the values of the array's elements
-	// std::string array_string = "{";
-	// uint64_t array_type_size = array_base_type_die->getByteSize();
-	// uint64_t array_size = array_type_size * (upper_bound + 1);
-	// for (uint64_t i = 0; i < array_size; i += array_type_size)
-	// {
-	// 	// Add a comma before adding the next value
-	// 	if (i > 0) array_string += ", ";
+	// Deduce the array's contents
+	std::string values = "{";
+	Attribute type_attr_byte_size = type_die.getAttributeByCode(DW_AT_byte_size);
+	uint64_t type_byte_size = type_attr_byte_size.getUnsigned();
+	uint64_t array_byte_size = type_byte_size * (array_length + 1);
+	for (uint64_t i = 0; i < array_byte_size; i += type_byte_size)
+	{
+		// Add a comma before adding the next value
+		if (i > 0) values += ", ";
 
-	// 	// Deduce the array values and add them to the string
-	// 	array_string += deduce(address + i, *array_base_type_die);
-	// }
-	// array_string += "}";
-	// return array_string;
-	return "redacted";
+		values += deduce(address + i, type_die);
+	}
+	values += "}";
+
+	return values;
 }
 
 std::string ValueDeducer::deduceStructure(uint64_t address, DIE &struct_die)
