@@ -166,24 +166,20 @@ std::string ValueDeducer::deduceBase(uint64_t address, const DIE &base_die)
 
 std::string ValueDeducer::deducePointer(uint64_t address, const DIE &pointer_die)
 {
-	// // std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(pointer_die.type_offset);
-	// std::unique_ptr<DIE> die = debug_data->info()->getDIEByOffset(pointer_die.getOffset());
-	// if (die == nullptr) return "Error retrieving type pointed to";
+	Attribute type = pointer_die.getAttributeByCode(DW_AT_type);
+	DIE type_die = *(debug_data->info()->getDIEByOffset(type.getOffset()));
 
-	// uint64_t new_address = ptrace(PTRACE_PEEKDATA, target_pid, address, 0);
-	// return deduce(new_address, *die);
-	return "redacted";
+	uint64_t new_address = ptrace(PTRACE_PEEKDATA, target_pid, address, 0);
+	return deduce(new_address, type_die);
 }
 
 std::string ValueDeducer::deduceReference(uint64_t address, const DIE &ref_die)
 {
-	// // std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(ref_die.type_offset);
-	// std::unique_ptr<DIE> die = debug_data->info()->getDIEByOffset(red_die.getOffset());
-	// if (die == nullptr) return "Error retrieving reference type";
+	Attribute type = ref_die.getAttributeByCode(DW_AT_type);
+	DIE type_die = *(debug_data->info()->getDIEByOffset(type.getOffset()));
 
-	// uint64_t new_address = ptrace(PTRACE_PEEKDATA, target_pid, address, 0);
-	// return deduce(new_address, *die);
-	return "redacted";
+	uint64_t new_address = ptrace(PTRACE_PEEKDATA, target_pid, address, 0);
+	return deduce(new_address, type_die);
 }
 
 std::string ValueDeducer::deduceArray(uint64_t address, DIE &array_die)
@@ -290,9 +286,8 @@ std::string ValueDeducer::deduceClass(uint64_t address, DIE &class_die)
 
 std::string ValueDeducer::deduceConst(uint64_t address, const DIE &const_die)
 {
-	// // Get the type of the array
-	// std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(const_die.getTypeOffset());
-	// if (die == nullptr) return "Error retrieving const variable type";
-	// return deduce(address, *die);
-	return "redacted";
+	// Get the type
+	Attribute type = const_die.getAttributeByCode(DW_AT_type);
+	DIE type_die = *(debug_data->info()->getDIEByOffset(type.getOffset()));
+	return deduce(address, type_die);
 }
