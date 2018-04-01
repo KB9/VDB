@@ -225,35 +225,33 @@ std::string ValueDeducer::deduceArray(uint64_t address, DIE &array_die)
 }
 
 std::string ValueDeducer::deduceStructure(uint64_t address, DIE &struct_die)
-{
-	// std::string values = "{";
+{	
+	std::string values = "{";
 
-	// // Get the values of all the member variables
-	// uint64_t counter = 0;
-	// auto child_ptrs = struct_die.getChildren();
-	// for (auto child_ptr : child_ptrs)
-	// {
-	// 	if (child_ptr->getTagName() == "DW_TAG_member")
-	// 	{
-	// 		// Add a comma before adding the next member variable
-	// 		if (counter++ > 0) values += ", ";
+	uint64_t counter = 0;
+	std::vector<DIE> children = struct_die.getChildren();
+	for (auto &child : children)
+	{
+		if (child.getTagName() == "DW_TAG_member")
+		{
+			// Add a comma before adding the next member variable
+			if (counter++ > 0) values += ", ";
 
-	// 		// Get the member variable DIE, its base type and its address
-	// 		auto member = dynamic_cast<DIEMemberType *>(child_ptr.get());
-	// 		auto member_type_die = debug_data->info()->getDIEByOffset(member->getTypeOffset());
-	// 		uint64_t member_address = address + member->getDataMemberLocation();
+			Attribute type = child.getAttributeByCode(DW_AT_type);
+			Attribute member_location = child.getAttributeByCode(DW_AT_data_member_location);
+			uint64_t member_address = address + member_location.getUnsigned();
+			Attribute name = child.getAttributeByCode(DW_AT_name);
 
-	// 		// Append member variable name and value to the return string
-	// 		values += member->getName();
-	// 		values += "=";
-	// 		values += deduce(member_address, *member_type_die);
-	// 	}
-	// }
+			// Append member variable name and value to the return string
+			values += name.getString();
+			values += "=";
+			values += deduce(member_address, *(debug_data->info()->getDIEByOffset(type.getOffset())));
+		}
+	}
 
-	// values += "}";
+	values += "}";
 
-	// return values;
-	return "redacted";
+	return values;
 }
 
 std::string ValueDeducer::deduceClass(uint64_t address, DIE &class_die)
