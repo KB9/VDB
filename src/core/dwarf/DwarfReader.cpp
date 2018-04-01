@@ -215,7 +215,7 @@ DIE::DIE(const Dwarf_Debug &dbg, const Dwarf_Die &die)
 	setTagName();
 }
 
-std::vector<Attribute> DIE::getAttributes()
+std::vector<Attribute> DIE::getAttributes() const
 {
 	std::vector<Attribute> attributes;
 
@@ -236,7 +236,7 @@ std::vector<Attribute> DIE::getAttributes()
 	return attributes;
 }
 
-Attribute DIE::getAttributeByCode(Dwarf_Half code)
+Attribute DIE::getAttributeByCode(Dwarf_Half code) const
 {
 	std::vector<Attribute> attrs = getAttributes();
 	for (auto &attr : attrs)
@@ -287,7 +287,7 @@ std::vector<DIE> DIE::getChildren()
 	return children;
 }
 
-std::string DIE::getTagName()
+std::string DIE::getTagName() const
 {
 	return tag_name;
 }
@@ -428,13 +428,16 @@ std::vector<DIE> DwarfInfoReader::getDIEs(DIEMatcher &matcher)
 
 std::vector<DIE> DwarfInfoReader::getChildrenRecursive(DIE &die)
 {
+	std::vector<DIE> all_children;
+
 	std::vector<DIE> children = die.getChildren();
+	all_children.insert(all_children.end(), children.begin(), children.end());
 	for (auto &child : children)
 	{
-		std::vector<DIE> sub_children = child.getChildren();
-		children.insert(children.end(), sub_children.begin(), sub_children.end());
+		std::vector<DIE> sub_children = getChildrenRecursive(child);
+		all_children.insert(all_children.end(), sub_children.begin(), sub_children.end());
 	}
-	return children;
+	return all_children;
 }
 
 DwarfInfoReader::VariableLocExpr DwarfInfoReader::getVarLocExpr(const std::string &var_name)

@@ -90,11 +90,11 @@ class DIE
 public:
 	DIE(const Dwarf_Debug &dbg, const Dwarf_Die &die);
 
-	std::vector<Attribute> getAttributes();
-	Attribute getAttributeByCode(Dwarf_Half code);
+	std::vector<Attribute> getAttributes() const;
+	Attribute getAttributeByCode(Dwarf_Half code) const;
 	DIE *getParent();
 	std::vector<DIE> getChildren();
-	std::string getTagName();
+	std::string getTagName() const;
 	Dwarf_Off getOffset();
 
 	Dwarf_Die die; // NOTE: TEMPORARILY PUBLIC FOR TESTING/DEBUG PURPOSES
