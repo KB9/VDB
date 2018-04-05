@@ -1,8 +1,5 @@
 #include "DebugEngine.hpp"
 
-// #include "dwarf/CUHeader.hpp"
-// #include "dwarf/DIEVariable.hpp"
-
 DebugEngine::DebugEngine(const std::string& executable_name, std::shared_ptr<DwarfDebug> debug_data) :
 	target_name(executable_name),
 	debug_data(debug_data)
