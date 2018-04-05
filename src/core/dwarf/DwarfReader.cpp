@@ -247,9 +247,13 @@ Attribute DIE::getAttributeByCode(Dwarf_Half code) const
 	assert(false && "Not a valid attribute");
 }
 
-DIE *DIE::getParent()
+Dwarf_Off DIE::getCUOffset()
 {
-	return parent;
+	Dwarf_Off cu_offset;
+	Dwarf_Error err;
+	if (dwarf_CU_dieoffset_given_die(die, &cu_offset, &err) != DW_DLV_OK)
+		procmsg("[DWARF_ERROR] Error in dwarf_die_CU_offset!\n");
+	return cu_offset;
 }
 
 std::vector<DIE> DIE::getChildren()

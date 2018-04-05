@@ -92,7 +92,7 @@ public:
 
 	std::vector<Attribute> getAttributes() const;
 	Attribute getAttributeByCode(Dwarf_Half code) const;
-	DIE *getParent();
+	Dwarf_Off getCUOffset();
 	std::vector<DIE> getChildren();
 	std::string getTagName() const;
 	Dwarf_Off getOffset();
@@ -102,7 +102,6 @@ public:
 private:
 	Dwarf_Debug dbg;
 	// Dwarf_Die die;
-	DIE *parent = nullptr;
 	std::string tag_name;
 
 	void setTagName();
