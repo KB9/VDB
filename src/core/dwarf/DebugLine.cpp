@@ -3,7 +3,6 @@
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
-// DebugLine::DebugLine(DIECompileUnit &compile_unit_die)
 DebugLine::DebugLine(DIE &compile_unit_die)
 {
 	/*

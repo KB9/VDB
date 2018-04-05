@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <memory>
 
-// #include "DIECompileUnit.hpp"
 #include "DwarfReader.hpp"
 
 // Structure containing information about a single source line
@@ -31,7 +30,6 @@ struct Line
 class DebugLine
 {
 public:
-	// DebugLine(DIECompileUnit &compile_unit_die);
 	DebugLine(DIE &compile_unit_die);
 
 	std::unique_ptr<std::vector<Line>> getLine(uint64_t line_number);

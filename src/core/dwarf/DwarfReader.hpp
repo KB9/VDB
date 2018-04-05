@@ -1,25 +1,5 @@
 #pragma once
 
-/*
-TODO:
-
-I need to create a lazily loaded DIE structure for this compilation unit. Time
-for some brainstorming:
-
-1)
-AIM:
-This could be a tree like I had before but, instead of instantiating all the
-children of the compile unit DIE, I could only instantiate the ones that are
-required. This would be akin to a guided DFS where only branches that are used
-are instantiated and memoised.
-PROBLEMS:
-How would I direct the instantiation path?: The subprogram DIEs have an address
-range. If I know the address for my search, I can consecutively narrow the
-address range by selecting subprograms that contain the address within their
-address ranges.
-The above doesn't work... Subprograms can be located anywhere in memory.
-*/
-
 #include <tuple>
 #include <vector>
 #include <string>
