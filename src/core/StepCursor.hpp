@@ -10,8 +10,6 @@
 #include <string>
 #include <vector>
 
-#include "dwarf/DebuggingInformationEntry.hpp"
-#include "dwarf/DIESubprogram.hpp"
 #include "dwarf/DebugLine.hpp"
 #include "dwarf/DwarfDebug.hpp"
 #include "BreakpointTable.hpp"
@@ -37,14 +35,14 @@ private:
 	std::shared_ptr<BreakpointTable> user_breakpoints = nullptr;
 
 	// Updated after every step to keep track of the cursor
-	uint64_t address;
+	uint64_t address = 0;
 	uint64_t line_number;
 	std::string source_file;
 
 	uint64_t stepToNextSourceLine(pid_t pid, uint64_t addr,
 	                              bool include_current_addr = false);
 	uint64_t stepToCallingFunction(pid_t pid, uint64_t addr);
-	DIESubprogram *getSubprogramFromAddress(uint64_t address);
+	DIE getSubprogramFromAddress(uint64_t address);
 	std::unique_ptr<BreakpointTable> createSubprogramBreakpoints(pid_t pid,
 	                                                             uint64_t addr,
 	                                                             bool include_current_addr);

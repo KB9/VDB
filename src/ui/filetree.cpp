@@ -10,16 +10,16 @@ FileTree::FileTree(QWidget *parent) : QTreeWidget(parent)
     setColumnCount(1);
 }
 
-void FileTree::populate(std::vector<CUHeader> &cu_headers)
+void FileTree::populate(std::vector<SourceFile> files)
 {
-    for (CUHeader &header : cu_headers)
+    for (const SourceFile &file : files)
     {
-        QString filename = QString(header.root_die->getName().c_str());
-        QString directory = QString(header.root_die->getCompDir().c_str());
-        QString absPath = directory + '/' + filename;
-        QStringList pathParts = absPath.split('/', QString::SkipEmptyParts);
+        QString filename = QString(file.name.c_str());
+        QString directory = QString(file.dir.c_str());
+        QString abs_path = directory + '/' + filename;
+        QStringList path_parts = abs_path.split('/', QString::SkipEmptyParts);
 
-        insertFile(pathParts, this->invisibleRootItem());
+        insertFile(path_parts, this->invisibleRootItem());
     }
 }
 

@@ -1,22 +1,7 @@
 CPPFILES = 	Breakpoint.cpp \
 			BreakpointTable.cpp \
 			Unwinder.cpp \
-			dwarf/DebuggingInformationEntry.cpp \
-			dwarf/DIEBaseType.cpp \
-			dwarf/DIECompileUnit.cpp \
-			dwarf/DIELexicalBlock.cpp \
-			dwarf/DIEPointerType.cpp \
-			dwarf/DIEReferenceType.cpp \
-			dwarf/DIESubprogram.cpp \
-			dwarf/DIEFormalParameter.cpp \
-			dwarf/DIEVariable.cpp \
-			dwarf/DIEArrayType.cpp \
-			dwarf/DIESubrangeType.cpp \
-			dwarf/DIEStructureType.cpp \
-			dwarf/DIEClassType.cpp \
-			dwarf/DIEMemberType.cpp \
-			dwarf/DIEConstType.cpp \
-			dwarf/CUHeader.cpp \
+			dwarf/DwarfReader.cpp \
 			dwarf/DebugInfo.cpp \
 			dwarf/DebugLine.cpp \
 			dwarf/DebugAddressRanges.cpp \

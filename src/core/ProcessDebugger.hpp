@@ -107,12 +107,6 @@ private:
 
 	BreakpointAction breakpoint_action = UNDEFINED;
 
-	// Variable related to retrieving the values of the target's variables
-	bool deduction_enabled = false;
-	char **deduced_value = nullptr;
-	VariableLocExpr loc_expr;
-	DebuggingInformationEntry *type_die = nullptr;
-
 	bool threadedDebug();
 	bool runTarget();
 	bool runDebugger();
@@ -125,5 +119,4 @@ private:
 
 	void deduceValue(GetValueMessage *value_msg);
 	void getStackTrace(GetStackTraceMessage *stack_msg);
-	bool isWithinScope(DebuggingInformationEntry &die);
 };

@@ -3,9 +3,7 @@
 #include <sys/ptrace.h>
 
 #include <cmath>
-
-#include "dwarf/DIESubrangeType.hpp"
-#include "dwarf/DIEMemberType.hpp"
+#include <cassert>
 
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
@@ -16,42 +14,35 @@ ValueDeducer::ValueDeducer(pid_t target_pid, std::shared_ptr<DwarfDebug> debug_d
 	this->debug_data = debug_data;
 }
 
-std::string ValueDeducer::deduce(uint64_t address, DebuggingInformationEntry &type_die)
+std::string ValueDeducer::deduce(uint64_t address, DIE &type_die)
 {
 	if (type_die.getTagName() == "DW_TAG_base_type")
 	{
-		DIEBaseType *die_base_type = dynamic_cast<DIEBaseType *>(&type_die);
-		return deduceBase(address, *die_base_type);
+		return deduceBase(address, type_die);
 	}
 	else if (type_die.getTagName() == "DW_TAG_pointer_type")
 	{
-		DIEPointerType *die_ptr_type = dynamic_cast<DIEPointerType *>(&type_die);
-		return deducePointer(address, *die_ptr_type);
+		return deducePointer(address, type_die);
 	}
 	else if (type_die.getTagName() == "DW_TAG_reference_type")
 	{
-		DIEReferenceType* die_ref_type = dynamic_cast<DIEReferenceType *>(&type_die);
-		return deduceReference(address, *die_ref_type);
+		return deduceReference(address, type_die);
 	}
 	else if (type_die.getTagName() == "DW_TAG_array_type")
 	{
-		DIEArrayType *die_array_type = dynamic_cast<DIEArrayType *>(&type_die);
-		return deduceArray(address, *die_array_type);
+		return deduceArray(address, type_die);
 	}
 	else if (type_die.getTagName() == "DW_TAG_structure_type")
 	{
-		DIEStructureType *die_struct_type = dynamic_cast<DIEStructureType *>(&type_die);
-		return deduceStructure(address, *die_struct_type);
+		return deduceStructure(address, type_die);
 	}
 	else if (type_die.getTagName() == "DW_TAG_class_type")
 	{
-		DIEClassType *die_class_type = dynamic_cast<DIEClassType *>(&type_die);
-		return deduceClass(address, *die_class_type);
+		return deduceClass(address, type_die);
 	}
 	else if (type_die.getTagName() == "DW_TAG_const_type")
 	{
-		DIEConstType *die_const_type = dynamic_cast<DIEConstType *>(&type_die);
-		return deduceConst(address, *die_const_type);
+		return deduceConst(address, type_die);
 	}
 	else
 	{
@@ -59,13 +50,17 @@ std::string ValueDeducer::deduce(uint64_t address, DebuggingInformationEntry &ty
 	}
 }
 
-std::string ValueDeducer::deduceBase(uint64_t address, const DIEBaseType &base_die)
+std::string ValueDeducer::deduceBase(uint64_t address, const DIE &base_die)
 {
+	assert(base_die.getTagName() == "DW_TAG_base_type");
+
 	// Get the data at the specified target process address
 	uint64_t data = ptrace(PTRACE_PEEKDATA, target_pid, address, 0);
 
 	// Use the encoding and byte size to determine the data's type
-	switch (base_die.getEncoding())
+	Attribute encoding = base_die.getAttributeByCode(DW_AT_encoding);
+	Attribute byte_size = base_die.getAttributeByCode(DW_AT_byte_size);
+	switch (encoding.getUnsigned())
 	{
 	//case DW_ATE_address:
 
@@ -79,12 +74,12 @@ std::string ValueDeducer::deduceBase(uint64_t address, const DIEBaseType &base_d
 
 	case DW_ATE_float:
 	{
-		if (base_die.getByteSize() == 4)
+		if (byte_size.getUnsigned() == 4)
 		{
 			float value = *((float *)&data);
 			return std::to_string(value);
 		}
-		else if (base_die.getByteSize() == 8)
+		else if (byte_size.getUnsigned() == 8)
 		{
 			double value = *((double *)&data);
 			return std::to_string(value);
@@ -95,22 +90,22 @@ std::string ValueDeducer::deduceBase(uint64_t address, const DIEBaseType &base_d
 
 	case DW_ATE_signed:
 	{
-		if (base_die.getByteSize() == 1)
+		if (byte_size.getUnsigned() == 1)
 		{
 			char value = (char)data;
 			return std::to_string(value);
 		}
-		else if (base_die.getByteSize() == 2)
+		else if (byte_size.getUnsigned() == 2)
 		{
 			short int value = (short int)data;
 			return std::to_string(value);
 		}
-		else if (base_die.getByteSize() == 4)
+		else if (byte_size.getUnsigned() == 4)
 		{
 			int value = (int)data;
 			return std::to_string(value);
 		}
-		else if (base_die.getByteSize() == 8)
+		else if (byte_size.getUnsigned() == 8)
 		{
 			long int value = (long int)data;
 			return std::to_string(value);
@@ -125,22 +120,22 @@ std::string ValueDeducer::deduceBase(uint64_t address, const DIEBaseType &base_d
 
 	case DW_ATE_unsigned:
 	{
-		if (base_die.getByteSize() == 1)
+		if (byte_size.getUnsigned() == 1)
 		{
 			unsigned char value = (unsigned char)data;
 			return std::to_string(value);
 		}
-		else if (base_die.getByteSize() == 2)
+		else if (byte_size.getUnsigned() == 2)
 		{
 			short unsigned int value = (short unsigned int)data;
 			return std::to_string(value);
 		}
-		else if (base_die.getByteSize() == 4)
+		else if (byte_size.getUnsigned() == 4)
 		{
 			unsigned int value = (unsigned int)data;
 			return std::to_string(value);
 		}
-		else if (base_die.getByteSize() == 8)
+		else if (byte_size.getUnsigned() == 8)
 		{
 			long unsigned int value = (long unsigned int)data;
 			return std::to_string(value);
@@ -166,86 +161,89 @@ std::string ValueDeducer::deduceBase(uint64_t address, const DIEBaseType &base_d
 	//case DW_ATE_decimal_float:
 	}
 
-	return "";
+	return "<unknown>";
 }
 
-std::string ValueDeducer::deducePointer(uint64_t address, const DIEPointerType &pointer_die)
+std::string ValueDeducer::deducePointer(uint64_t address, const DIE &pointer_die)
 {
-	std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(pointer_die.type_offset);
-	if (die == nullptr) return "Error retrieving type pointed to";
+	Attribute type = pointer_die.getAttributeByCode(DW_AT_type);
+	DIE type_die = *(debug_data->info()->getDIEByOffset(type.getOffset()));
 
 	uint64_t new_address = ptrace(PTRACE_PEEKDATA, target_pid, address, 0);
-	return deduce(new_address, *die);
+	return deduce(new_address, type_die);
 }
 
-std::string ValueDeducer::deduceReference(uint64_t address, const DIEReferenceType &ref_die)
+std::string ValueDeducer::deduceReference(uint64_t address, const DIE &ref_die)
 {
-	std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(ref_die.type_offset);
-	if (die == nullptr) return "Error retrieving reference type";
+	Attribute type = ref_die.getAttributeByCode(DW_AT_type);
+	DIE type_die = *(debug_data->info()->getDIEByOffset(type.getOffset()));
 
 	uint64_t new_address = ptrace(PTRACE_PEEKDATA, target_pid, address, 0);
-	return deduce(new_address, *die);
+	return deduce(new_address, type_die);
 }
 
-std::string ValueDeducer::deduceArray(uint64_t address, DIEArrayType &array_die)
+std::string ValueDeducer::deduceArray(uint64_t address, DIE &array_die)
 {
+	assert(array_die.getTagName() == "DW_TAG_array_type");
+
 	// Get the type of the array
-	std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(array_die.getTypeOffset());
-	if (die == nullptr) return "Error getting array type";
-	DIEBaseType *array_base_type_die = dynamic_cast<DIEBaseType *>(die.get());
+	Attribute type = array_die.getAttributeByCode(DW_AT_type);
+	DIE type_die = *(debug_data->info()->getDIEByOffset(type.getOffset()));
 
 	// Find the subrange child DIE to determine the upper bound of the array
-	uint64_t upper_bound = 0;
-	auto child_ptrs = array_die.getChildren();
-	for (auto child_ptr : child_ptrs)
+	uint64_t array_length = 0;
+	bool found_array_length = false;
+	std::vector<DIE> children = array_die.getChildren();
+	for (auto &child : children)
 	{
-		if (child_ptr->getTagName() == "DW_TAG_subrange_type")
+		if (child.getTagName() == "DW_TAG_subrange_type")
 		{
-			auto child = dynamic_cast<DIESubrangeType *>(child_ptr.get());
-			upper_bound = child->getUpperBound();
-			break;
+			Attribute upper_bound = child.getAttributeByCode(DW_AT_upper_bound);
+			array_length = upper_bound.getUnsigned();
+			found_array_length = true;
 		}
 	}
+	if (!found_array_length) return "Could not determine array length";
 
-	// Deduce the values of the array's elements
-	std::string array_string = "{";
-	uint64_t array_type_size = array_base_type_die->getByteSize();
-	uint64_t array_size = array_type_size * (upper_bound + 1);
-	for (uint64_t i = 0; i < array_size; i += array_type_size)
+	// Deduce the array's contents
+	std::string values = "{";
+	Attribute type_attr_byte_size = type_die.getAttributeByCode(DW_AT_byte_size);
+	uint64_t type_byte_size = type_attr_byte_size.getUnsigned();
+	uint64_t array_byte_size = type_byte_size * (array_length + 1);
+	for (uint64_t i = 0; i < array_byte_size; i += type_byte_size)
 	{
 		// Add a comma before adding the next value
-		if (i > 0) array_string += ", ";
+		if (i > 0) values += ", ";
 
-		// Deduce the array values and add them to the string
-		array_string += deduce(address + i, *array_base_type_die);
+		values += deduce(address + i, type_die);
 	}
-	array_string += "}";
-	return array_string;
+	values += "}";
+
+	return values;
 }
 
-std::string ValueDeducer::deduceStructure(uint64_t address, DIEStructureType &struct_die)
-{
+std::string ValueDeducer::deduceStructure(uint64_t address, DIE &struct_die)
+{	
 	std::string values = "{";
 
-	// Get the values of all the member variables
 	uint64_t counter = 0;
-	auto child_ptrs = struct_die.getChildren();
-	for (auto child_ptr : child_ptrs)
+	std::vector<DIE> children = struct_die.getChildren();
+	for (auto &child : children)
 	{
-		if (child_ptr->getTagName() == "DW_TAG_member")
+		if (child.getTagName() == "DW_TAG_member")
 		{
 			// Add a comma before adding the next member variable
 			if (counter++ > 0) values += ", ";
 
-			// Get the member variable DIE, its base type and its address
-			auto member = dynamic_cast<DIEMemberType *>(child_ptr.get());
-			auto member_type_die = debug_data->info()->getDIEByOffset(member->getTypeOffset());
-			uint64_t member_address = address + member->getDataMemberLocation();
+			Attribute type = child.getAttributeByCode(DW_AT_type);
+			Attribute member_location = child.getAttributeByCode(DW_AT_data_member_location);
+			uint64_t member_address = address + member_location.getUnsigned();
+			Attribute name = child.getAttributeByCode(DW_AT_name);
 
 			// Append member variable name and value to the return string
-			values += member->getName();
+			values += name.getString();
 			values += "=";
-			values += deduce(member_address, *member_type_die);
+			values += deduce(member_address, *(debug_data->info()->getDIEByOffset(type.getOffset())));
 		}
 	}
 
@@ -254,29 +252,30 @@ std::string ValueDeducer::deduceStructure(uint64_t address, DIEStructureType &st
 	return values;
 }
 
-std::string ValueDeducer::deduceClass(uint64_t address, DIEClassType &class_die)
+std::string ValueDeducer::deduceClass(uint64_t address, DIE &class_die)
 {
+	assert(class_die.getTagName() == "DW_TAG_class_type");
+
 	std::string values = "{";
 
-	// Get the values of all the member variables
 	uint64_t counter = 0;
-	auto child_ptrs = class_die.getChildren();
-	for (auto child_ptr : child_ptrs)
+	std::vector<DIE> children = class_die.getChildren();
+	for (auto &child : children)
 	{
-		if (child_ptr->getTagName() == "DW_TAG_member")
+		if (child.getTagName() == "DW_TAG_member")
 		{
 			// Add a comma before adding the next member variable
 			if (counter++ > 0) values += ", ";
 
-			// Get the member variable DIE, its base type and its address
-			auto member = dynamic_cast<DIEMemberType *>(child_ptr.get());
-			auto member_type_die = debug_data->info()->getDIEByOffset(member->getTypeOffset());
-			uint64_t member_address = address + member->getDataMemberLocation();
+			Attribute type = child.getAttributeByCode(DW_AT_type);
+			Attribute member_location = child.getAttributeByCode(DW_AT_data_member_location);
+			uint64_t member_address = address + member_location.getUnsigned();
+			Attribute name = child.getAttributeByCode(DW_AT_name);
 
 			// Append member variable name and value to the return string
-			values += member->getName();
+			values += name.getString();
 			values += "=";
-			values += deduce(member_address, *member_type_die);
+			values += deduce(member_address, *(debug_data->info()->getDIEByOffset(type.getOffset())));
 		}
 	}
 
@@ -285,10 +284,10 @@ std::string ValueDeducer::deduceClass(uint64_t address, DIEClassType &class_die)
 	return values;
 }
 
-std::string ValueDeducer::deduceConst(uint64_t address, const DIEConstType &const_die)
+std::string ValueDeducer::deduceConst(uint64_t address, const DIE &const_die)
 {
-	// Get the type of the array
-	std::shared_ptr<DebuggingInformationEntry> die = debug_data->info()->getDIEByOffset(const_die.getTypeOffset());
-	if (die == nullptr) return "Error retrieving const variable type";
-	return deduce(address, *die);
+	// Get the type
+	Attribute type = const_die.getAttributeByCode(DW_AT_type);
+	DIE type_die = *(debug_data->info()->getDIEByOffset(type.getOffset()));
+	return deduce(address, type_die);
 }
