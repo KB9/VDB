@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <sys/reg.h>
 #include <sys/user.h>
+#include <sys/stat.h>
 #include <stdio.h>
 
 #include "dwarf/DwarfDebug.hpp"
@@ -43,6 +44,9 @@ VDB::~VDB()
 
 bool VDB::init(const char *executable_name)
 {
+	if (!isExecutableFile(executable_name))
+		return false;
+
 	// Create the DWARF debug data for this target executable
 	dwarf = std::make_shared<DwarfDebug>(executable_name);
 
@@ -67,4 +71,14 @@ std::shared_ptr<DebugEngine> VDB::getDebugEngine()
 bool VDB::isInitialized()
 {
 	return is_initialized;
+}
+
+bool VDB::isExecutableFile(const char *executable_name)
+{
+	struct stat st;
+	if (stat(executable_name, &st) < 0)
+		return false;
+	if ((st.st_mode & S_IEXEC) != 0)
+		return true;
+	return false;
 }

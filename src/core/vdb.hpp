@@ -24,6 +24,8 @@ public:
 private:
 	bool is_initialized = false;
 
+	bool isExecutableFile(const char *executable_name);
+
 	std::shared_ptr<DwarfDebug> dwarf = nullptr;
 	std::shared_ptr<DebugEngine> engine = nullptr;
 };
