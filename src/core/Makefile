@@ -2,7 +2,6 @@ CPPFILES = 	Breakpoint.cpp \
 			BreakpointTable.cpp \
 			Unwinder.cpp \
 			dwarf/DwarfReader.cpp \
-			dwarf/DebugInfo.cpp \
 			dwarf/DebugLine.cpp \
 			dwarf/DebugAddressRanges.cpp \
 			dwarf/DwarfDebug.cpp \
