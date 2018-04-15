@@ -7,7 +7,7 @@
 
 #include <sys/types.h>
 
-#include "dwarf/DwarfDebug.hpp"
+class DwarfDebug;
 
 /*
 This is a unified and simplified interface for retrieving information about

@@ -2,6 +2,7 @@
 
 #include <cassert>
 
+#include "dwarf/DwarfDebug.hpp"
 #include "dwarf/DwarfExprInterpreter.hpp"
 #include "dwarf/ValueDeducer.hpp"
 
