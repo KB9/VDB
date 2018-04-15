@@ -3,7 +3,7 @@
 #include <cassert>
 
 #include "dwarf/DwarfExprInterpreter.hpp"
-#include "ValueDeducer.hpp"
+#include "dwarf/ValueDeducer.hpp"
 
 std::shared_ptr<DebugInfo> DebugInfo::readFrom(const std::string &executable_name)
 {

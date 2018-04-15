@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "DebugInfo.hpp"
+#include "DwarfDebug.hpp"
 
 class ValueDeducer
 {

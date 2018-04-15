@@ -6,8 +6,8 @@ CPPFILES = 	Breakpoint.cpp \
 			dwarf/DebugAddressRanges.cpp \
 			dwarf/DwarfDebug.cpp \
 			dwarf/DwarfExprInterpreter.cpp \
+			dwarf/ValueDeducer.cpp \
 			DebugInfo.cpp \
-			ValueDeducer.cpp \
 			StepCursor.cpp \
 			ProcessDebugger.cpp \
 			DebugEngine.cpp \
