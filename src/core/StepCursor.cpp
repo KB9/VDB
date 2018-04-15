@@ -5,10 +5,10 @@
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
-StepCursor::StepCursor(uint64_t address, std::shared_ptr<DwarfDebug> debug_data,
+StepCursor::StepCursor(uint64_t address, std::shared_ptr<DebugInfo> debug_info,
                        std::shared_ptr<BreakpointTable> user_breakpoints)
 {
-	this->debug_data = debug_data;
+	this->debug_info = debug_info;
 	this->user_breakpoints = user_breakpoints;
 	updateTrackingVars(address);
 }
@@ -32,8 +32,7 @@ void StepCursor::stepOver(pid_t pid)
 void StepCursor::stepInto(pid_t pid)
 {
 	// Step over a user breakpoint if current execution was halted by one
-	DIE start_sub = getSubprogramFromAddress(address);
-	std::string start_sub_name = start_sub.getAttributeByCode(DW_AT_name).getString();
+	DebugInfo::Function start_func = debug_info->getFunction(address);
 
 	user_regs_struct regs;
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
@@ -48,13 +47,12 @@ void StepCursor::stepInto(pid_t pid)
 	std::unique_ptr<BreakpointTable> internal_breakpoints = createSubprogramBreakpoints(pid, address, false);
 	internal_breakpoints->enableBreakpoints(pid);
 
-	DIE current_sub = getSubprogramFromAddress(regs.rip);
-	std::string current_sub_name = current_sub.getAttributeByCode(DW_AT_name).getString();
+	DebugInfo::Function current_func = debug_info->getFunction(regs.rip);
 
 	// Create the internal breakpoints for the current function, avoiding the
 	// breakpoint in the current function has been hit (ignoring the breakpoint
 	// that was started on)
-	while (current_sub_name == start_sub_name &&
+	while (current_func.name == start_func.name &&
 	       internal_breakpoints->getBreakpoint(regs.rip-1) == nullptr &&
 	       (user_breakpoints->getBreakpoint(regs.rip-1) == nullptr ||
 	       user_breakpoints->getBreakpoint(regs.rip-1)->addr == start_breakpoint->addr))
@@ -68,12 +66,10 @@ void StepCursor::stepInto(pid_t pid)
 		wait(&wait_status);
 		ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
-		current_sub = getSubprogramFromAddress(regs.rip);
-		current_sub_name = current_sub.getAttributeByCode(DW_AT_name).getString();
+		current_func = debug_info->getFunction(regs.rip);
 	}
 
-	current_sub = getSubprogramFromAddress(regs.rip);
-	current_sub_name = current_sub.getAttributeByCode(DW_AT_name).getString();
+	current_func = debug_info->getFunction(regs.rip);
 
 	// Disable the internal breakpoints again
 	internal_breakpoints->disableBreakpoints(pid);
@@ -101,7 +97,7 @@ void StepCursor::stepInto(pid_t pid)
 		updateTrackingVars(regs.rip - 1);
 	}
 	// If the subprogram name changed i.e. execution entered a new function
-	else if (current_sub_name != start_sub_name)
+	else if (current_func.name != start_func.name)
 	{
 		// Update the tracking variables with the 1st address in the new function
 		updateTrackingVars(regs.rip);
@@ -243,43 +239,21 @@ uint64_t StepCursor::stepToCallingFunction(pid_t pid, uint64_t addr)
 	}
 }
 
-DIE StepCursor::getSubprogramFromAddress(uint64_t address)
-{
-	DIEMatcher matcher;
-	matcher.setTags({"DW_TAG_subprogram"});
-	std::vector<DIE> subprograms = debug_data->info()->getDIEs(matcher);
-	for (auto sub : subprograms)
-	{
-		// TODO: Be careful of boundary calculation between DWARF versions
-		// (address vs. unsigned & upper bound vs. size)
-		uint64_t low_pc = sub.getAttributeByCode(DW_AT_low_pc).getAddress();
-		uint64_t high_pc = sub.getAttributeByCode(DW_AT_high_pc).getOffset();
-		if (address >= low_pc && address < (low_pc + high_pc))
-		{
-			return sub;
-		}
-	}
-
-	assert(false && "Address not within a subprogram");
-}
-
 std::unique_ptr<BreakpointTable> StepCursor::createSubprogramBreakpoints(pid_t pid,
                                                                          uint64_t addr,
                                                                          bool include_current_addr)
 {
 	// Initialize the internal breakpoint table
-	auto internal_breakpoints = std::make_unique<BreakpointTable>(debug_data);
+	auto internal_breakpoints = std::make_unique<BreakpointTable>(debug_info);
 
 	// Set breakpoints on lines which don't have a user breakpoint, and which
 	// aren't the line currently stopped on
-	std::vector<Line> lines = debug_data->line()->getAllLines();
-	DIE sub = getSubprogramFromAddress(addr);
-	for (auto line : lines)
+	std::vector<DebugInfo::SourceLine> lines = debug_info->getAllLines();
+	DebugInfo::Function func = debug_info->getFunction(addr);
+	for (const auto &line : lines)
 	{
-		uint64_t low_pc = sub.getAttributeByCode(DW_AT_low_pc).getAddress();
-		uint64_t high_pc = sub.getAttributeByCode(DW_AT_high_pc).getOffset();
-		if (line.address >= low_pc && line.address < (low_pc + high_pc) &&
-		    user_breakpoints->getBreakpoint(line.address) == nullptr)
+		bool in_func_addr_range = line.address >= func.start_address && line.address < func.end_address;
+		if (in_func_addr_range)
 		{
 			// If the line address is not equal to the current address, add it
 			if (line.address != addr)
@@ -310,7 +284,7 @@ std::unique_ptr<BreakpointTable> StepCursor::createReturnBreakpoint(pid_t pid,
                                                                     uint64_t addr)
 {
 	// Initialize the internal breakpoint table
-	auto internal_breakpoints = std::make_unique<BreakpointTable>(debug_data);
+	auto internal_breakpoints = std::make_unique<BreakpointTable>(debug_info);
 
 	// Include a breakpoint at the point in the code that this function returns
 	// to (if there isn't already a user breakpoint there)
@@ -327,14 +301,10 @@ void StepCursor::updateTrackingVars(uint64_t addr)
 {
 	this->address = addr;
 
-	DIE current_subprogram = getSubprogramFromAddress(addr);
-	Dwarf_Off current_cu_offset = current_subprogram.getCUOffset();
-	DIE current_cu = *(debug_data->info()->getDIEByOffset(current_cu_offset));
-	Attribute file_name = current_cu.getAttributeByCode(DW_AT_name);
-	Attribute file_dir = current_cu.getAttributeByCode(DW_AT_comp_dir);
-	this->source_file = file_dir.getString() + "/" + file_name.getString();
+	DebugInfo::Function current_func = debug_info->getFunction(addr);
+	this->source_file = current_func.decl_file;
 
-	std::vector<Line> lines = debug_data->line()->getAllLines();
+	std::vector<DebugInfo::SourceLine> lines = debug_info->getAllLines();
 	uint64_t src_line_number = 0;
 	for (auto line : lines)
 	{

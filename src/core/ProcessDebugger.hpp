@@ -11,7 +11,7 @@
 #include <condition_variable>
 
 #include "BreakpointTable.hpp"
-#include "dwarf/DwarfDebug.hpp"
+#include "DebugInfo.hpp"
 
 #include "ThreadSafeQueue.hpp"
 
@@ -75,7 +75,7 @@ public:
 
 	ProcessDebugger(const std::string& executable_name,
 	                std::shared_ptr<BreakpointTable> breakpoint_table,
-	                std::shared_ptr<DwarfDebug> debug_data);
+	                std::shared_ptr<DebugInfo> debug_info);
 	~ProcessDebugger();
 
 	void continueExecution();
@@ -89,7 +89,7 @@ public:
 	bool isDebugging();
 
 private:
-	std::shared_ptr<DwarfDebug> debug_data = nullptr;
+	std::shared_ptr<DebugInfo> debug_info = nullptr;
 
 	std::string target_name;
 	pid_t target_pid;

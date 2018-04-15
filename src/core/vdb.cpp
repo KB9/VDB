@@ -48,19 +48,19 @@ bool VDB::init(const char *executable_name)
 		return false;
 
 	// Create the DWARF debug data for this target executable
-	dwarf = std::make_shared<DwarfDebug>(executable_name);
+	debug_info = DebugInfo::readFrom(executable_name);
 
 	// Create the debug engine for debugging the target executable
-	engine = std::make_shared<DebugEngine>(executable_name, dwarf);
+	engine = std::make_shared<DebugEngine>(executable_name, debug_info);
 
 	is_initialized = true;
 
 	return true;
 }
 
-std::shared_ptr<DwarfDebug> VDB::getDwarfDebugData()
+std::shared_ptr<DebugInfo> VDB::getDebugInfo()
 {
-	return dwarf;
+	return debug_info;
 }
 
 std::shared_ptr<DebugEngine> VDB::getDebugEngine()

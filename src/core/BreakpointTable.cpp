@@ -1,11 +1,9 @@
 #include "BreakpointTable.hpp"
 
-#include "dwarf/DebugLine.hpp"
-
 #include <cstring>
 
-BreakpointTable::BreakpointTable(std::shared_ptr<DwarfDebug> dwarf) :
-	dwarf(dwarf)
+BreakpointTable::BreakpointTable(std::shared_ptr<DebugInfo> debug_info) :
+	debug_info(debug_info)
 {
 	
 }
@@ -30,11 +28,11 @@ bool BreakpointTable::addBreakpoint(const char *source_file,
                                     unsigned int line_number)
 {
 	mtx.lock();
-	for (Line line : dwarf->line()->getAllLines())
+	for (const DebugInfo::SourceLine &line : debug_info->getAllLines())
 	{
-		if (strcmp(line.source, source_file) == 0 &&
-		    line.number == line_number &&
-		    breakpoints_by_address.find(line.address) == breakpoints_by_address.end())
+		bool is_match = line.file_name == source_file && line.number == line_number;
+		bool is_not_breakpoint = breakpoints_by_address.find(line.address) == breakpoints_by_address.end();
+		if (is_match && is_not_breakpoint)
 		{
 			Breakpoint breakpoint((void *)line.address, line.number, source_file);
 			std::pair<uint64_t, Breakpoint> entry(line.address, breakpoint);
@@ -52,11 +50,11 @@ bool BreakpointTable::removeBreakpoint(const char *source_file,
                                        unsigned int line_number)
 {
 	mtx.lock();
-	for (Line line : dwarf->line()->getAllLines())
+	for (const DebugInfo::SourceLine &line : debug_info->getAllLines())
 	{
-		if (strcmp(line.source, source_file) == 0 &&
-		    line.number == line_number &&
-		    breakpoints_by_address.find(line.address) != breakpoints_by_address.end())
+		bool is_match = line.file_name == source_file && line.number == line_number;
+		bool is_breakpoint = breakpoints_by_address.find(line.address) != breakpoints_by_address.end();
+		if (is_match && is_breakpoint)
 		{
 			breakpoints_by_address.erase(line.address);
 
@@ -111,10 +109,11 @@ std::unique_ptr<Breakpoint> BreakpointTable::getBreakpoint(uint64_t address)
 bool BreakpointTable::isBreakpoint(const std::string &source_file,
                                    unsigned int line_number)
 {
-	for (Line line : dwarf->line()->getAllLines())
+	for (const DebugInfo::SourceLine &line : debug_info->getAllLines())
 	{
-		if (source_file == line.source && line.number == line_number &&
-		    breakpoints_by_address.find(line.address) != breakpoints_by_address.end())
+		bool is_match = line.file_name == source_file && line.number == line_number;
+		bool is_breakpoint = breakpoints_by_address.find(line.address) != breakpoints_by_address.end();
+		if (is_match && is_breakpoint)
 		{
 			return true;
 		}

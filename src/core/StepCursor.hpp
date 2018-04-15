@@ -10,8 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "dwarf/DebugLine.hpp"
-#include "dwarf/DwarfDebug.hpp"
+#include "DebugInfo.hpp"
 #include "BreakpointTable.hpp"
 
 // Provides functionality for source-level stepping including stepping over
@@ -19,7 +18,7 @@
 class StepCursor
 {
 public:
-	StepCursor(uint64_t address, std::shared_ptr<DwarfDebug> debug_data,
+	StepCursor(uint64_t address, std::shared_ptr<DebugInfo> debug_info,
 	           std::shared_ptr<BreakpointTable> user_breakpoints);
 
 	void stepOver(pid_t pid);
@@ -31,7 +30,7 @@ public:
 	std::string getCurrentSourceFile();
 
 private:
-	std::shared_ptr<DwarfDebug> debug_data = nullptr;
+	std::shared_ptr<DebugInfo> debug_info = nullptr;
 	std::shared_ptr<BreakpointTable> user_breakpoints = nullptr;
 
 	// Updated after every step to keep track of the cursor
@@ -42,7 +41,6 @@ private:
 	uint64_t stepToNextSourceLine(pid_t pid, uint64_t addr,
 	                              bool include_current_addr = false);
 	uint64_t stepToCallingFunction(pid_t pid, uint64_t addr);
-	DIE getSubprogramFromAddress(uint64_t address);
 	std::unique_ptr<BreakpointTable> createSubprogramBreakpoints(pid_t pid,
 	                                                             uint64_t addr,
 	                                                             bool include_current_addr);

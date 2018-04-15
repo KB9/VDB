@@ -10,12 +10,12 @@
 #include <mutex>
 
 #include "Breakpoint.hpp"
-#include "dwarf/DwarfDebug.hpp"
+#include "DebugInfo.hpp"
 
 class BreakpointTable
 {
 public:
-	BreakpointTable(std::shared_ptr<DwarfDebug> dwarf);
+	BreakpointTable(std::shared_ptr<DebugInfo> debug_info);
 
 	void addBreakpoint(uint64_t address);
 	void removeBreakpoint(uint64_t address);
@@ -30,7 +30,7 @@ public:
 	bool isBreakpoint(const std::string &source_file, unsigned int line_number);
 
 private:
-	std::shared_ptr<DwarfDebug> dwarf = nullptr;
+	std::shared_ptr<DebugInfo> debug_info = nullptr;
 
 	std::mutex mtx;
 

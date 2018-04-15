@@ -13,7 +13,7 @@ class FileTree : public QTreeWidget
 public:
     FileTree(QWidget *parent = 0);
 
-    void populate(std::vector<SourceFile> files);
+    void populate(std::vector<std::string> file_names);
 
 signals:
     void onFileSelected(QString filepath);

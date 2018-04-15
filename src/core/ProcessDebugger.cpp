@@ -1,8 +1,5 @@
 #include "ProcessDebugger.hpp"
 
-#include "dwarf/DwarfExprInterpreter.hpp"
-#include "ValueDeducer.hpp"
-
 #include "Unwinder.hpp"
 
 #include <cstring>
@@ -45,8 +42,8 @@ void printProcessSignal(int signal)
 
 ProcessDebugger::ProcessDebugger(const std::string& executable_name,
                                  std::shared_ptr<BreakpointTable> breakpoint_table,
-                                 std::shared_ptr<DwarfDebug> debug_data) :
-	debug_data(debug_data),
+                                 std::shared_ptr<DebugInfo> debug_info) :
+	debug_info(debug_info),
 	target_name(executable_name),
 	breakpoint_table(breakpoint_table)
 {
@@ -292,7 +289,7 @@ void ProcessDebugger::onBreakpointHit()
 	broadcastBreakpointHit(breakpoint->file_name, breakpoint->line_number);
 
 	// Create the step cursor at the address the program is currently stopped at
-	StepCursor step_cursor(breakpoint_address, debug_data, breakpoint_table);
+	StepCursor step_cursor(breakpoint_address, debug_info, breakpoint_table);
 
 	// Wait until an action is taken for this particular breakpoint
 	std::unique_lock<std::mutex> lck(mtx);
@@ -328,20 +325,9 @@ void ProcessDebugger::onBreakpointHit()
 
 void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 {
-	auto loc_expr = debug_data->info()->getVarLocExpr(value_msg->variable_name);
-	DwarfExprInterpreter interpreter(target_pid);
-	uint64_t address = interpreter.parse(&loc_expr.frame_base,
-	                                     loc_expr.location_op,
-	                                     loc_expr.location_param);
-	if (address > 0)
-	{
-		ValueDeducer deducer(target_pid, debug_data);
-		value_msg->value = deducer.deduce(address, *(loc_expr.type));
-	}
-	else
-	{
-		value_msg->value = "Variable not locatable";
-	}
+	DebugInfo::Variable var = debug_info->getVariable(value_msg->variable_name,
+	                                                  target_pid);
+	value_msg->value = var.value;
 }
 
 void ProcessDebugger::getStackTrace(GetStackTraceMessage *stack_msg)

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "BreakpointTable.hpp"
-#include "dwarf/DwarfDebug.hpp"
+#include "DebugInfo.hpp"
 #include "ProcessDebugger.hpp"
 
 #include <memory>
@@ -19,7 +19,7 @@ void procmsg(const char* format, ...);
 class DebugEngine
 {
 public:
-	DebugEngine(const std::string& executable_name, std::shared_ptr<DwarfDebug> debug_data);
+	DebugEngine(const std::string& executable_name, std::shared_ptr<DebugInfo> debug_info);
 	~DebugEngine();
 
 	bool run();
@@ -40,6 +40,6 @@ private:
 	std::string target_name;
 
 	std::shared_ptr<ProcessDebugger> debugger = nullptr;
-	std::shared_ptr<DwarfDebug> debug_data = nullptr;
+	std::shared_ptr<DebugInfo> debug_info = nullptr;
 	std::shared_ptr<BreakpointTable> breakpoint_table = nullptr;
 };

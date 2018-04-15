@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <memory>
 
-#include "dwarf/DwarfDebug.hpp"
+#include "DebugInfo.hpp"
 #include "BreakpointTable.hpp"
 
 #include "DebugEngine.hpp"
@@ -18,7 +18,7 @@ public:
 	bool init(const char *executable_name);
 	bool isInitialized();
 
-	std::shared_ptr<DwarfDebug> getDwarfDebugData();
+	std::shared_ptr<DebugInfo> getDebugInfo();
 	std::shared_ptr<DebugEngine> getDebugEngine();
 
 private:
@@ -26,6 +26,6 @@ private:
 
 	bool isExecutableFile(const char *executable_name);
 
-	std::shared_ptr<DwarfDebug> dwarf = nullptr;
+	std::shared_ptr<DebugInfo> debug_info = nullptr;
 	std::shared_ptr<DebugEngine> engine = nullptr;
 };
