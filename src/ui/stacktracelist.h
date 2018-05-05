@@ -8,7 +8,7 @@ class StackTraceList : public QListWidget
     Q_OBJECT
 
 public:
-    StackTraceList(QWidget *parent = 0) {}
+    StackTraceList(QWidget *parent = 0);
 };
 
 #endif // STACKTRACELIST_H
