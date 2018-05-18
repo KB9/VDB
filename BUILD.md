@@ -6,6 +6,7 @@ Install the following packages via the APT package manager:
 * libunwind-dev
 * libdwarf-dev
 * cmake
+* libqt4-dev
 
 # Building
 This project uses a CMake build system. To build, navigate to the project's root directory and execute the following:

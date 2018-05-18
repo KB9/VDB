@@ -46,6 +46,8 @@ DwarfDebugInfo::Function DwarfDebugInfo::getFunction(uint64_t address) const
 	std::vector<DIE> subprograms = dwarf->info()->getDIEs(matcher);
 	for (auto sub : subprograms)
 	{
+		// TODO: Subprogram DIEs do not have to have lowpc/highpc address values.
+		// This occurs when they are externally defined from the CU.
 		uint64_t low_pc = sub.getAttributeByCode(DW_AT_low_pc).getAddress();
 		uint64_t high_pc = sub.getAttributeByCode(DW_AT_high_pc).getOffset();
 		if (address >= low_pc && address < (low_pc + high_pc))
@@ -88,7 +90,14 @@ std::vector<std::string> DwarfDebugInfo::getSourceFiles() const
 	std::vector<SourceFile> files = sourceFiles(dwarf);
 	for (const auto &file : files)
 	{
-		file_names.push_back(file.dir + '/' + file.name);
+		// If the file path is relative, the directory it was compiled within
+		// will become the prefix. If not, only the name is used as it defines
+		// the fully-qualified path.
+		bool is_relative_path = (file.name.at(0) != '/');
+		if (is_relative_path)
+			file_names.push_back(file.dir + '/' + file.name);
+		else
+			file_names.push_back(file.name);
 	}
 	return file_names;
 }
