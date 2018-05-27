@@ -22,15 +22,22 @@ DwarfDebugInfo::Variable DwarfDebugInfo::getVariable(const std::string &variable
 	DwarfDebugInfo::Variable var;
 	var.name = variable_name;
 
-	auto loc_expr = dwarf->info()->getVarLocExpr(variable_name);
-	DwarfExprInterpreter interpreter(pid);
-	uint64_t address = interpreter.parse(&loc_expr.frame_base,
-	                                     loc_expr.location_op,
-	                                     loc_expr.location_param);
-	if (address > 0)
+	auto loc_expr_opt = dwarf->info()->getVarLocExpr(variable_name);
+	if (loc_expr_opt.has_value())
 	{
-		ValueDeducer deducer(pid, dwarf);
-		var.value = deducer.deduce(address, *(loc_expr.type));
+		DwarfExprInterpreter interpreter(pid);
+		uint64_t address = interpreter.parse(&loc_expr_opt.value().frame_base,
+		                                     loc_expr_opt.value().location_op,
+		                                     loc_expr_opt.value().location_param);
+		if (address > 0)
+		{
+			ValueDeducer deducer(pid, dwarf);
+			var.value = deducer.deduce(address, *(loc_expr_opt.value().type));
+		}
+		else
+		{
+			var.value = "Variable not locatable";
+		}
 	}
 	else
 	{
@@ -39,38 +46,41 @@ DwarfDebugInfo::Variable DwarfDebugInfo::getVariable(const std::string &variable
 	return var;
 }
 
-DwarfDebugInfo::Function DwarfDebugInfo::getFunction(uint64_t address) const
+std::optional<DwarfDebugInfo::Function> DwarfDebugInfo::getFunction(uint64_t address) const
 {
 	DIEMatcher matcher;
 	matcher.setTags({"DW_TAG_subprogram"});
 	std::vector<DIE> subprograms = dwarf->info()->getDIEs(matcher);
 	for (auto sub : subprograms)
 	{
-		// TODO: Subprogram DIEs do not have to have lowpc/highpc address values.
+		auto low_pc_opt = sub.getAttributeValue<DW_AT_low_pc>();
+		auto high_pc_opt = sub.getAttributeValue<DW_AT_high_pc>();
+
+		// Subprogram DIEs may not have lowpc/highpc address values.
 		// This occurs when they are externally defined from the CU.
-		uint64_t low_pc = sub.getAttributeByCode(DW_AT_low_pc).getAddress();
-		uint64_t high_pc = sub.getAttributeByCode(DW_AT_high_pc).getOffset();
+		if (!low_pc_opt.has_value() || !high_pc_opt.has_value())
+			continue;
+
+		uint64_t low_pc = low_pc_opt.value();
+		uint64_t high_pc = high_pc_opt.value();
 		if (address >= low_pc && address < (low_pc + high_pc))
 		{
 			DebugInfo::Function function;
-			// function.name = sub.getTagName();
-			function.name = sub.getAttributeByCode(DW_AT_name).getString();
-			function.start_address = sub.getAttributeByCode(DW_AT_low_pc).getAddress();
-			function.end_address = sub.getAttributeByCode(DW_AT_low_pc).getAddress() + sub.getAttributeByCode(DW_AT_high_pc).getOffset();
+			function.name = sub.getAttributeValue<DW_AT_name>().value();
+			function.start_address = sub.getAttributeValue<DW_AT_low_pc>().value();
+			function.end_address = sub.getAttributeValue<DW_AT_low_pc>().value() + sub.getAttributeValue<DW_AT_high_pc>().value();
 
 			Dwarf_Off cu_offset = sub.getCUOffset();
 			DIE cu = *(dwarf->info()->getDIEByOffset(cu_offset));
-			Attribute file_name = cu.getAttributeByCode(DW_AT_name);
-			Attribute file_dir = cu.getAttributeByCode(DW_AT_comp_dir);
-			function.decl_file = file_dir.getString() + "/" + file_name.getString();
+			std::string file_name = cu.getAttributeValue<DW_AT_name>().value();
+			std::string file_dir = cu.getAttributeValue<DW_AT_comp_dir>().value();
+			function.decl_file = file_dir + "/" + file_name;
+			function.decl_line = sub.getAttributeValue<DW_AT_decl_line>().value();
 
-			function.decl_line = sub.getAttributeByCode(DW_AT_decl_line).getUnsigned();
-
-			return function;
+			return std::make_optional<DwarfDebugInfo::Function>(function);
 		}
 	}
-
-	assert(false && "Address not within a function");
+	return std::nullopt;
 }
 
 std::vector<DwarfDebugInfo::SourceLine> DwarfDebugInfo::getAllLines() const

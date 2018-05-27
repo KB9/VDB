@@ -60,17 +60,10 @@ std::vector<SourceFile> sourceFiles(std::shared_ptr<DwarfDebug> debug_data)
 	for (auto &cu : compile_units)
 	{
 		SourceFile file;
-
-		// Loop through its attributes until its name is found
-		const std::vector<Attribute> cu_attrs = cu.getAttributes();
-		for (const Attribute &attr : cu_attrs)
-		{
-			if (attr.getCode() == DW_AT_name)
-				file.name = attr.getString();
-			if (attr.getCode() == DW_AT_comp_dir)
-				file.dir = attr.getString();
-		}
-
+		char default_name[] = "<file_name_not_found>";
+		char default_dir[] = "<file_dir_not_found>";
+		file.name = cu.getAttributeValue<DW_AT_name>().value_or(default_name);
+		file.dir = cu.getAttributeValue<DW_AT_comp_dir>().value_or(default_dir);
 		files.push_back(file);
 	}
 	return files;

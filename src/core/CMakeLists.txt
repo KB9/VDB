@@ -7,8 +7,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -gdwarf-5")
 add_definitions(-DENV64)
 
 add_library(vdb SHARED
+	dwarf/Attribute.cpp
 	dwarf/DebugAddressRanges.cpp
 	dwarf/DebugLine.cpp
+	dwarf/DIE.cpp
 	dwarf/DwarfDebug.cpp
 	dwarf/DwarfExprInterpreter.cpp
 	dwarf/DwarfReader.cpp

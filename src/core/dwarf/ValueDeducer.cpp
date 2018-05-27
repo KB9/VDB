@@ -58,9 +58,15 @@ std::string ValueDeducer::deduceBase(uint64_t address, const DIE &base_die)
 	uint64_t data = ptrace(PTRACE_PEEKDATA, target_pid, address, 0);
 
 	// Use the encoding and byte size to determine the data's type
-	Attribute encoding = base_die.getAttributeByCode(DW_AT_encoding);
-	Attribute byte_size = base_die.getAttributeByCode(DW_AT_byte_size);
-	switch (encoding.getUnsigned())
+	auto encoding_opt = base_die.getAttributeValue<DW_AT_encoding>();
+	auto byte_size_opt = base_die.getAttributeValue<DW_AT_byte_size>();
+	if (!encoding_opt.has_value() || !byte_size_opt.has_value())
+		return "Could not determine variable encoding/byte size";
+
+	Dwarf_Unsigned encoding = encoding_opt.value();
+	Dwarf_Unsigned byte_size = byte_size_opt.value();
+	
+	switch (encoding)
 	{
 	//case DW_ATE_address:
 
@@ -74,12 +80,12 @@ std::string ValueDeducer::deduceBase(uint64_t address, const DIE &base_die)
 
 	case DW_ATE_float:
 	{
-		if (byte_size.getUnsigned() == 4)
+		if (byte_size == 4)
 		{
 			float value = *((float *)&data);
 			return std::to_string(value);
 		}
-		else if (byte_size.getUnsigned() == 8)
+		else if (byte_size == 8)
 		{
 			double value = *((double *)&data);
 			return std::to_string(value);
@@ -90,22 +96,22 @@ std::string ValueDeducer::deduceBase(uint64_t address, const DIE &base_die)
 
 	case DW_ATE_signed:
 	{
-		if (byte_size.getUnsigned() == 1)
+		if (byte_size == 1)
 		{
 			char value = (char)data;
 			return std::to_string(value);
 		}
-		else if (byte_size.getUnsigned() == 2)
+		else if (byte_size == 2)
 		{
 			short int value = (short int)data;
 			return std::to_string(value);
 		}
-		else if (byte_size.getUnsigned() == 4)
+		else if (byte_size == 4)
 		{
 			int value = (int)data;
 			return std::to_string(value);
 		}
-		else if (byte_size.getUnsigned() == 8)
+		else if (byte_size == 8)
 		{
 			long int value = (long int)data;
 			return std::to_string(value);
@@ -120,22 +126,22 @@ std::string ValueDeducer::deduceBase(uint64_t address, const DIE &base_die)
 
 	case DW_ATE_unsigned:
 	{
-		if (byte_size.getUnsigned() == 1)
+		if (byte_size == 1)
 		{
 			unsigned char value = (unsigned char)data;
 			return std::to_string(value);
 		}
-		else if (byte_size.getUnsigned() == 2)
+		else if (byte_size == 2)
 		{
 			short unsigned int value = (short unsigned int)data;
 			return std::to_string(value);
 		}
-		else if (byte_size.getUnsigned() == 4)
+		else if (byte_size == 4)
 		{
 			unsigned int value = (unsigned int)data;
 			return std::to_string(value);
 		}
-		else if (byte_size.getUnsigned() == 8)
+		else if (byte_size == 8)
 		{
 			long unsigned int value = (long unsigned int)data;
 			return std::to_string(value);
@@ -166,8 +172,8 @@ std::string ValueDeducer::deduceBase(uint64_t address, const DIE &base_die)
 
 std::string ValueDeducer::deducePointer(uint64_t address, const DIE &pointer_die)
 {
-	Attribute type = pointer_die.getAttributeByCode(DW_AT_type);
-	DIE type_die = *(debug_data->info()->getDIEByOffset(type.getOffset()));
+	Dwarf_Off type_offset = pointer_die.getAttributeValue<DW_AT_type>().value();
+	DIE type_die = *(debug_data->info()->getDIEByOffset(type_offset));
 
 	uint64_t new_address = ptrace(PTRACE_PEEKDATA, target_pid, address, 0);
 	return deduce(new_address, type_die);
@@ -175,8 +181,8 @@ std::string ValueDeducer::deducePointer(uint64_t address, const DIE &pointer_die
 
 std::string ValueDeducer::deduceReference(uint64_t address, const DIE &ref_die)
 {
-	Attribute type = ref_die.getAttributeByCode(DW_AT_type);
-	DIE type_die = *(debug_data->info()->getDIEByOffset(type.getOffset()));
+	Dwarf_Off type_offset = ref_die.getAttributeValue<DW_AT_type>().value();
+	DIE type_die = *(debug_data->info()->getDIEByOffset(type_offset));
 
 	uint64_t new_address = ptrace(PTRACE_PEEKDATA, target_pid, address, 0);
 	return deduce(new_address, type_die);
@@ -187,8 +193,8 @@ std::string ValueDeducer::deduceArray(uint64_t address, DIE &array_die)
 	assert(array_die.getTagName() == "DW_TAG_array_type");
 
 	// Get the type of the array
-	Attribute type = array_die.getAttributeByCode(DW_AT_type);
-	DIE type_die = *(debug_data->info()->getDIEByOffset(type.getOffset()));
+	Dwarf_Off type_offset = array_die.getAttributeValue<DW_AT_type>().value();
+	DIE type_die = *(debug_data->info()->getDIEByOffset(type_offset));
 
 	// Find the subrange child DIE to determine the upper bound of the array
 	uint64_t array_length = 0;
@@ -198,8 +204,7 @@ std::string ValueDeducer::deduceArray(uint64_t address, DIE &array_die)
 	{
 		if (child.getTagName() == "DW_TAG_subrange_type")
 		{
-			Attribute upper_bound = child.getAttributeByCode(DW_AT_upper_bound);
-			array_length = upper_bound.getUnsigned();
+			array_length = child.getAttributeValue<DW_AT_upper_bound>().value();
 			found_array_length = true;
 		}
 	}
@@ -207,8 +212,7 @@ std::string ValueDeducer::deduceArray(uint64_t address, DIE &array_die)
 
 	// Deduce the array's contents
 	std::string values = "{";
-	Attribute type_attr_byte_size = type_die.getAttributeByCode(DW_AT_byte_size);
-	uint64_t type_byte_size = type_attr_byte_size.getUnsigned();
+	uint64_t type_byte_size = type_die.getAttributeValue<DW_AT_byte_size>().value();
 	uint64_t array_byte_size = type_byte_size * (array_length + 1);
 	for (uint64_t i = 0; i < array_byte_size; i += type_byte_size)
 	{
@@ -235,15 +239,15 @@ std::string ValueDeducer::deduceStructure(uint64_t address, DIE &struct_die)
 			// Add a comma before adding the next member variable
 			if (counter++ > 0) values += ", ";
 
-			Attribute type = child.getAttributeByCode(DW_AT_type);
-			Attribute member_location = child.getAttributeByCode(DW_AT_data_member_location);
-			uint64_t member_address = address + member_location.getUnsigned();
-			Attribute name = child.getAttributeByCode(DW_AT_name);
+			Dwarf_Off type_offset = child.getAttributeValue<DW_AT_type>().value();
+			Dwarf_Unsigned member_location = child.getAttributeValue<DW_AT_data_member_location>().value();
+			uint64_t member_address = address + member_location;
+			std::string name = child.getAttributeValue<DW_AT_name>().value();
 
 			// Append member variable name and value to the return string
-			values += name.getString();
+			values += name;
 			values += "=";
-			values += deduce(member_address, *(debug_data->info()->getDIEByOffset(type.getOffset())));
+			values += deduce(member_address, *(debug_data->info()->getDIEByOffset(type_offset)));
 		}
 	}
 
@@ -267,15 +271,15 @@ std::string ValueDeducer::deduceClass(uint64_t address, DIE &class_die)
 			// Add a comma before adding the next member variable
 			if (counter++ > 0) values += ", ";
 
-			Attribute type = child.getAttributeByCode(DW_AT_type);
-			Attribute member_location = child.getAttributeByCode(DW_AT_data_member_location);
-			uint64_t member_address = address + member_location.getUnsigned();
-			Attribute name = child.getAttributeByCode(DW_AT_name);
+			Dwarf_Off type_offset = child.getAttributeValue<DW_AT_type>().value();
+			Dwarf_Unsigned member_location = child.getAttributeValue<DW_AT_data_member_location>().value();
+			uint64_t member_address = address + member_location;
+			std::string name = child.getAttributeValue<DW_AT_name>().value();
 
 			// Append member variable name and value to the return string
-			values += name.getString();
+			values += name;
 			values += "=";
-			values += deduce(member_address, *(debug_data->info()->getDIEByOffset(type.getOffset())));
+			values += deduce(member_address, *(debug_data->info()->getDIEByOffset(type_offset)));
 		}
 	}
 
@@ -287,7 +291,7 @@ std::string ValueDeducer::deduceClass(uint64_t address, DIE &class_die)
 std::string ValueDeducer::deduceConst(uint64_t address, const DIE &const_die)
 {
 	// Get the type
-	Attribute type = const_die.getAttributeByCode(DW_AT_type);
-	DIE type_die = *(debug_data->info()->getDIEByOffset(type.getOffset()));
+	Dwarf_Off type_offset = const_die.getAttributeValue<DW_AT_type>().value();
+	DIE type_die = *(debug_data->info()->getDIEByOffset(type_offset));
 	return deduce(address, type_die);
 }

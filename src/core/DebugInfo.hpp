@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <optional>
 
 #include <sys/types.h>
 
@@ -44,7 +45,7 @@ public:
 	static std::shared_ptr<DebugInfo> readFrom(const std::string &executable_name);
 
 	virtual Variable getVariable(const std::string &variable_name, pid_t pid) const = 0;
-	virtual Function getFunction(uint64_t address) const = 0;
+	virtual std::optional<Function> getFunction(uint64_t address) const = 0;
 	virtual std::vector<SourceLine> getAllLines() const = 0;
 	virtual std::vector<std::string> getSourceFiles() const = 0;
 };
@@ -55,7 +56,7 @@ public:
 	DwarfDebugInfo(const std::string &executable_name);
 
 	virtual Variable getVariable(const std::string &variable_name, pid_t pid) const override;
-	virtual Function getFunction(uint64_t address) const override;
+	virtual std::optional<Function> getFunction(uint64_t address) const override;
 	virtual std::vector<SourceLine> getAllLines() const override;
 	virtual std::vector<std::string> getSourceFiles() const override;
 

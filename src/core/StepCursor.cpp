@@ -1,5 +1,7 @@
 #include "StepCursor.hpp"
 
+#include <cassert>
+
 #include "Unwinder.hpp"
 
 // FOWARD DECLARATION [TODO: REMOVE]
@@ -32,7 +34,9 @@ void StepCursor::stepOver(pid_t pid)
 void StepCursor::stepInto(pid_t pid)
 {
 	// Step over a user breakpoint if current execution was halted by one
-	DebugInfo::Function start_func = debug_info->getFunction(address);
+	auto start_func_opt = debug_info->getFunction(address);
+	assert(start_func_opt.has_value() && "Current step cursor address is not within a function!");
+	DebugInfo::Function start_func = start_func_opt.value();
 
 	user_regs_struct regs;
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
@@ -47,7 +51,9 @@ void StepCursor::stepInto(pid_t pid)
 	std::unique_ptr<BreakpointTable> internal_breakpoints = createSubprogramBreakpoints(pid, address, false);
 	internal_breakpoints->enableBreakpoints(pid);
 
-	DebugInfo::Function current_func = debug_info->getFunction(regs.rip);
+	auto current_func_opt = debug_info->getFunction(regs.rip);
+	assert(current_func_opt.has_value() && "IP address is not within a function!");
+	DebugInfo::Function current_func = current_func_opt.value();
 
 	// Create the internal breakpoints for the current function, avoiding the
 	// breakpoint in the current function has been hit (ignoring the breakpoint
@@ -66,10 +72,14 @@ void StepCursor::stepInto(pid_t pid)
 		wait(&wait_status);
 		ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
-		current_func = debug_info->getFunction(regs.rip);
+		current_func_opt = debug_info->getFunction(regs.rip);
+		assert(current_func_opt.has_value() && "Step into resulted in address not within a function!");
+		current_func = current_func_opt.value();
 	}
 
-	current_func = debug_info->getFunction(regs.rip);
+	current_func_opt = debug_info->getFunction(regs.rip);
+	assert(current_func_opt.has_value() && "Step into resulted in address not within a function!");
+	current_func = current_func_opt.value();
 
 	// Disable the internal breakpoints again
 	internal_breakpoints->disableBreakpoints(pid);
@@ -249,7 +259,9 @@ std::unique_ptr<BreakpointTable> StepCursor::createSubprogramBreakpoints(pid_t p
 	// Set breakpoints on lines which don't have a user breakpoint, and which
 	// aren't the line currently stopped on
 	std::vector<DebugInfo::SourceLine> lines = debug_info->getAllLines();
-	DebugInfo::Function func = debug_info->getFunction(addr);
+	auto func_opt = debug_info->getFunction(addr);
+	assert(func_opt.has_value() && "Could not create internal breakpoints: address not within function!");
+	DebugInfo::Function func = func_opt.value();
 	for (const auto &line : lines)
 	{
 		bool in_func_addr_range = line.address >= func.start_address && line.address < func.end_address;
@@ -301,7 +313,9 @@ void StepCursor::updateTrackingVars(uint64_t addr)
 {
 	this->address = addr;
 
-	DebugInfo::Function current_func = debug_info->getFunction(addr);
+	auto current_func_opt = debug_info->getFunction(addr);
+	assert(current_func_opt.has_value() && "Current step cursor address is not within a function!");
+	DebugInfo::Function current_func = current_func_opt.value();
 	this->source_file = current_func.decl_file;
 
 	std::vector<DebugInfo::SourceLine> lines = debug_info->getAllLines();
