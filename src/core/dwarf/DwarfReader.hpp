@@ -5,6 +5,7 @@
 #include <string>
 #include <memory>
 #include <optional>
+#include <sys/user.h>
 
 #include <dwarf.h>
 #include "libdwarf.h"
@@ -34,7 +35,7 @@ public:
 		uint8_t *location_param;
 		std::unique_ptr<DIE> type;
 	};
-	std::optional<VariableLocExpr> getVarLocExpr(const std::string &var_name);
+	std::optional<VariableLocExpr> getVarLocExpr(const std::string &var_name, pid_t pid);
 
 private:
 	Dwarf_Debug dbg;

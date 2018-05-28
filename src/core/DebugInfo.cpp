@@ -22,7 +22,7 @@ DwarfDebugInfo::Variable DwarfDebugInfo::getVariable(const std::string &variable
 	DwarfDebugInfo::Variable var;
 	var.name = variable_name;
 
-	auto loc_expr_opt = dwarf->info()->getVarLocExpr(variable_name);
+	auto loc_expr_opt = dwarf->info()->getVarLocExpr(variable_name, pid);
 	if (loc_expr_opt.has_value())
 	{
 		DwarfExprInterpreter interpreter(pid);

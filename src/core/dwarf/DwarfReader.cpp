@@ -3,6 +3,8 @@
 #include <cassert>
 #include <algorithm>
 
+#include <sys/ptrace.h>
+
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
@@ -140,7 +142,8 @@ std::vector<DIE> DwarfInfoReader::getChildrenRecursive(DIE &die)
 	return all_children;
 }
 
-std::optional<DwarfInfoReader::VariableLocExpr> DwarfInfoReader::getVarLocExpr(const std::string &var_name)
+std::optional<DwarfInfoReader::VariableLocExpr> DwarfInfoReader::getVarLocExpr(const std::string &var_name,
+                                                                               pid_t pid)
 {
 	DwarfInfoReader::VariableLocExpr loc_expr;
 
@@ -150,6 +153,20 @@ std::optional<DwarfInfoReader::VariableLocExpr> DwarfInfoReader::getVarLocExpr(c
 	std::vector<DIE> subprograms = getDIEs(matcher);
 	for (auto &sub : subprograms)
 	{
+		// Ensure that the variable is within the address range of the function
+		// the IP is currently within
+		auto low_pc_opt = sub.getAttributeValue<DW_AT_low_pc>();
+		auto high_pc_opt = sub.getAttributeValue<DW_AT_high_pc>();
+		if (!low_pc_opt.has_value() || !high_pc_opt.has_value())
+			continue;
+
+		user_regs_struct regs;
+		ptrace(PTRACE_GETREGS, pid, 0, &regs);
+		uint64_t low_pc = low_pc_opt.value();
+		uint64_t high_pc = high_pc_opt.value();
+		if (regs.rip < low_pc || regs.rip >= (low_pc + high_pc))
+			continue;
+
 		// Determine if this subprogram DIE has a frame base attribute
 		std::optional<ExprLoc> frame_base_opt = sub.getAttributeValue<DW_AT_frame_base>();
 		if (!frame_base_opt.has_value())
