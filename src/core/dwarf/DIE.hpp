@@ -1,3 +1,6 @@
+#ifndef _DIE_H_
+#define _DIE_H_
+
 #include <vector>
 #include <string>
 #include <optional>
@@ -69,3 +72,5 @@ private:
 	std::vector<std::string> tags;
 	std::vector<Dwarf_Half> attr_codes;
 };
+
+#endif // _DIE_H_

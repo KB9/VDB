@@ -1,3 +1,6 @@
+#ifndef _ATTRIBUTE_H_
+#define _ATTRIBUTE_H_
+
 #include <string>
 #include <cassert>
 
@@ -100,3 +103,5 @@ public:
 	static bool isMatchingType(const Dwarf_Attribute &attr);
 	static value_type value(const Dwarf_Attribute &attr);
 };
+
+#endif // _ATTRIBUTE_H_
