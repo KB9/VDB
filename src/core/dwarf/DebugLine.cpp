@@ -3,7 +3,99 @@
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
 
-DebugLine::DebugLine(DIE &compile_unit_die)
+DebugLine::DebugLine(const std::vector<DIE> &compile_units) :
+	compile_units(compile_units)
+{
+
+}
+
+// std::optional<Line> DebugLine::getLine(uint64_t address)
+// {
+// 	DIE compile_unit = getCompileUnit(address);
+// 	std::vector<Line> lines = generateLineInfo(compile_unit, address, address + 1);
+// 	return (lines.empty() ? std::nullopt : std::make_optional<Line>(lines.at(0)));
+// }
+
+std::vector<Line> DebugLine::getFunctionLines(uint64_t address)
+{
+	std::optional<DIE> compile_unit_opt = getCompileUnit(address);
+	if (not compile_unit_opt.has_value())
+		return {};
+
+	DIE compile_unit = compile_unit_opt.value();
+	std::vector<DIE> children = compile_unit.getChildren();
+	while (!children.empty())
+	{
+		// Examine all this child's children
+		std::vector<DIE> subchildren = children.front().getChildren();
+		children.insert(children.end(), subchildren.begin(), subchildren.end());
+
+		// If the child is a subprogram
+		if (children.front().getTagName() == "DW_TAG_subprogram")
+		{
+			// If the subprogram has address range information
+			auto low_pc_opt = children.front().getAttributeValue<DW_AT_low_pc>();
+			auto high_pc_opt = children.front().getAttributeValue<DW_AT_high_pc>();
+			if (low_pc_opt.has_value() && high_pc_opt.has_value())
+			{
+				// Check if the address is within this function's range
+				Dwarf_Addr low_pc = low_pc_opt.value();
+				Dwarf_Off high_pc = high_pc_opt.value();
+				if (address >= low_pc && address < (low_pc + high_pc))
+				{
+					std::vector<Line> func_lines = generateLineInfo(compile_unit,
+					                                                low_pc,
+					                                                (low_pc + high_pc));
+					return func_lines;
+				}
+			}
+		}
+
+		children.erase(children.begin());
+	}
+	return {};
+}
+
+std::vector<Line> DebugLine::getCULines(uint64_t address)
+{
+	std::optional<DIE> compile_unit_opt = getCompileUnit(address);
+	if (compile_unit_opt.has_value())
+		return generateLineInfo(compile_unit_opt.value());
+	else
+		return {};
+}
+
+std::vector<Line> DebugLine::getCULines(const DIE &compile_unit)
+{
+	return generateLineInfo(compile_unit);
+}
+
+std::optional<DIE> DebugLine::getCompileUnit(uint64_t address)
+{
+	for (const auto &cu : compile_units)
+	{
+		auto low_pc_opt = cu.getAttributeValue<DW_AT_low_pc>();
+		auto high_pc_opt = cu.getAttributeValue<DW_AT_high_pc>();
+
+		if (!low_pc_opt.has_value() || !high_pc_opt.has_value())
+		{
+			procmsg("[DEBUG_LINE] Specified DIE is not a compilation unit DIE!");
+			continue;
+		}
+
+		Dwarf_Addr low_pc = low_pc_opt.value();
+		Dwarf_Off high_pc = high_pc_opt.value();
+		if (address >= low_pc && address < (low_pc + high_pc))
+		{
+			return std::make_optional<DIE>(cu);
+		}
+	}
+	return std::nullopt;
+}
+
+std::vector<Line> DebugLine::generateLineInfo(const DIE &compile_unit,
+                                              uint64_t start_address,
+                                              uint64_t end_address)
 {
 	/*
 	TODO:
@@ -12,13 +104,15 @@ DebugLine::DebugLine(DIE &compile_unit_die)
 	implemented as well.
 	*/
 
+	std::vector<Line> lines;
+
 	Dwarf_Line *line_buffer = nullptr;
 	Dwarf_Signed line_count = 0;
 	Dwarf_Error err;
 
 	// Get the source lines from the specified compilation unit
 	int result = dwarf_srclines(
-		compile_unit_die.die,
+		compile_unit.get(),
 		&line_buffer,
 		&line_count,
 		&err);
@@ -29,17 +123,23 @@ DebugLine::DebugLine(DIE &compile_unit_die)
 		{
 			Dwarf_Error err;
 
-			// Get the line number
-			Dwarf_Unsigned line_number;
-			int result = dwarf_lineno(line_buffer[i], &line_number, &err);
-			if (result != DW_DLV_OK)
-				procmsg("[DWARF_ERROR] Error in dwarf_lineno!\n");
-
 			// Get the line address
 			Dwarf_Addr line_addr;
 			result = dwarf_lineaddr(line_buffer[i], &line_addr, &err);
 			if (result != DW_DLV_OK)
 				procmsg("[DWARF_ERROR] Error in dwarf_lineaddr!\n");
+
+			// Only include the line entries which are within the specified
+			// address range
+			if (start_address > 0 && end_address > 0)
+				if (line_addr < start_address || line_addr >= end_address)
+					continue;
+
+			// Get the line number
+			Dwarf_Unsigned line_number;
+			int result = dwarf_lineno(line_buffer[i], &line_number, &err);
+			if (result != DW_DLV_OK)
+				procmsg("[DWARF_ERROR] Error in dwarf_lineno!\n");
 
 			// Determine whether it is the beginning statement or not
 			Dwarf_Bool is_begin_statement;
@@ -53,58 +153,13 @@ DebugLine::DebugLine(DIE &compile_unit_die)
 			if (result != DW_DLV_OK)
 				procmsg("[DWARF_ERROR] Error in dwarf_linesrc!\n");
 
-			// Store the line information and insert it into the lines map
-			Line line(line_number, line_addr, is_begin_statement, line_src);
-			insertLine(line);
-
-			procmsg("[DWARF] [%s] Line %d saved! (0x%08x)\n", line_src, line_number, line_addr);
+			// Store the line information
+			lines.emplace_back(line_number, line_addr, is_begin_statement, line_src);
 		}
 	}
 	else
 	{
 		procmsg("[DWARF_ERROR] Error in dwarf_srclines!\n");
 	}
-}
-
-void DebugLine::insertLine(const Line &line)
-{
-	// Push all lines to the line vector
-	line_vector.push_back(line);
-
-	// Check if a line is already inserted at this line number in the map
-	std::unordered_map<uint64_t, std::vector<Line>>::const_iterator it = line_map.find(line.number);
-	if (it == line_map.end())
-	{
-		// If the line is not already in the map
-		// Create a new vector, insert the line and insert the vector to the map
-		std::vector<Line> lines;
-		lines.push_back(line);
-		line_map.insert(std::pair<uint64_t, std::vector<Line>>(line.number, lines));
-	}
-	else
-	{
-		// Insert the line into the element's line vector
-		std::vector<Line> &lines = line_map.at(line.number);
-		lines.push_back(line);
-	}
-}
-
-// Get the line information for the line at the specified line number
-std::unique_ptr<std::vector<Line>> DebugLine::getLine(uint64_t line_number)
-{
-	std::unordered_map<uint64_t, std::vector<Line>>::const_iterator it = line_map.find(line_number);
-	if (it == line_map.end())
-	{
-		return nullptr;
-	}
-	else
-	{
-		return std::make_unique<std::vector<Line>>(line_map.at(line_number));
-	}
-}
-
-// Gets a vector of all the lines
-std::vector<Line> DebugLine::getAllLines()
-{
-	return line_vector;
+	return lines;
 }

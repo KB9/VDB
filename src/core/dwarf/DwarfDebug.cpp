@@ -22,7 +22,7 @@ DwarfDebug::DwarfDebug(std::string filename)
 
 	// Initialize the various DWARF debugging components
 	debug_info = std::make_shared<DwarfInfoReader>(dbg);
-	debug_line = std::make_shared<DebugLine>(debug_info->getCompileUnits()[0]);
+	debug_line = std::make_shared<DebugLine>(debug_info->getCompileUnits());
 	debug_aranges = std::make_shared<DebugAddressRanges>(dbg);
 }
 

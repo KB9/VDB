@@ -50,11 +50,11 @@ public:
 	std::string getTagName() const;
 	Dwarf_Off getOffset();
 
-	Dwarf_Die die; // NOTE: TEMPORARILY PUBLIC FOR TESTING/DEBUG PURPOSES
+	const Dwarf_Die &get() const;
 
 private:
 	Dwarf_Debug dbg;
-	// Dwarf_Die die;
+	Dwarf_Die die;
 	std::string tag_name;
 
 	void setTagName();

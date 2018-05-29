@@ -258,27 +258,15 @@ std::unique_ptr<BreakpointTable> StepCursor::createSubprogramBreakpoints(pid_t p
 
 	// Set breakpoints on lines which don't have a user breakpoint, and which
 	// aren't the line currently stopped on
-	std::vector<DebugInfo::SourceLine> lines = debug_info->getAllLines();
 	auto func_opt = debug_info->getFunction(addr);
 	assert(func_opt.has_value() && "Could not create internal breakpoints: address not within function!");
 	DebugInfo::Function func = func_opt.value();
-	for (const auto &line : lines)
+	for (const auto &line : debug_info->getFunctionLines(addr))
 	{
-		bool in_func_addr_range = line.address >= func.start_address && line.address < func.end_address;
-		if (in_func_addr_range)
-		{
-			// If the line address is not equal to the current address, add it
-			if (line.address != addr)
-			{
-				internal_breakpoints->addBreakpoint(line.address);
-			}
-			// If the line address is equal to the current address and the
-			// current address inclusion flag has been enabled, add it
-			else if (include_current_addr)
-			{
-				internal_breakpoints->addBreakpoint(line.address);
-			}
-		}
+		if (line.address != addr)
+			internal_breakpoints->addBreakpoint(line.address);
+		else if (include_current_addr)
+			internal_breakpoints->addBreakpoint(line.address);
 	}
 
 	// Include a breakpoint at the point in the code that this function returns
@@ -286,8 +274,12 @@ std::unique_ptr<BreakpointTable> StepCursor::createSubprogramBreakpoints(pid_t p
 	Unwinder unwinder(pid);
 	unwinder.unwindStep();
 	uint64_t return_address = unwinder.getRegisterValue(UNW_REG_IP);
-	if (user_breakpoints->getBreakpoint(return_address) == nullptr)
-		internal_breakpoints->addBreakpoint(return_address);
+	std::vector<DebugInfo::SourceLine> lines = debug_info->getFunctionLines(return_address);
+	for (const auto &line : lines)
+	{
+		if (user_breakpoints->getBreakpoint(line.address) == nullptr)
+			internal_breakpoints->addBreakpoint(line.address);
+	}
 
 	return std::move(internal_breakpoints);
 }
@@ -303,8 +295,12 @@ std::unique_ptr<BreakpointTable> StepCursor::createReturnBreakpoint(pid_t pid,
 	Unwinder unwinder(pid);
 	unwinder.unwindStep();
 	uint64_t return_address = unwinder.getRegisterValue(UNW_REG_IP);
-	if (user_breakpoints->getBreakpoint(return_address) == nullptr)
-		internal_breakpoints->addBreakpoint(return_address);
+	std::vector<DebugInfo::SourceLine> lines = debug_info->getFunctionLines(return_address);
+	for (const auto &line : lines)
+	{
+		if (user_breakpoints->getBreakpoint(line.address) == nullptr)
+			internal_breakpoints->addBreakpoint(line.address);
+	}
 
 	return std::move(internal_breakpoints);
 }
@@ -318,7 +314,7 @@ void StepCursor::updateTrackingVars(uint64_t addr)
 	DebugInfo::Function current_func = current_func_opt.value();
 	this->source_file = current_func.decl_file;
 
-	std::vector<DebugInfo::SourceLine> lines = debug_info->getAllLines();
+	std::vector<DebugInfo::SourceLine> lines = debug_info->getFunctionLines(addr);
 	uint64_t src_line_number = 0;
 	for (auto line : lines)
 	{

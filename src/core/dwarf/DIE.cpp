@@ -86,3 +86,8 @@ void DIE::setTagName()
 
 	this->tag_name = tag_name;
 }
+
+const Dwarf_Die &DIE::get() const
+{
+	return die;
+}

@@ -28,7 +28,7 @@ bool BreakpointTable::addBreakpoint(const char *source_file,
                                     unsigned int line_number)
 {
 	mtx.lock();
-	for (const DebugInfo::SourceLine &line : debug_info->getAllLines())
+	for (const DebugInfo::SourceLine &line : debug_info->getSourceFileLines(source_file))
 	{
 		bool is_match = line.file_name == source_file && line.number == line_number;
 		bool is_not_breakpoint = breakpoints_by_address.find(line.address) == breakpoints_by_address.end();
@@ -50,7 +50,7 @@ bool BreakpointTable::removeBreakpoint(const char *source_file,
                                        unsigned int line_number)
 {
 	mtx.lock();
-	for (const DebugInfo::SourceLine &line : debug_info->getAllLines())
+	for (const DebugInfo::SourceLine &line : debug_info->getSourceFileLines(source_file))
 	{
 		bool is_match = line.file_name == source_file && line.number == line_number;
 		bool is_breakpoint = breakpoints_by_address.find(line.address) != breakpoints_by_address.end();
@@ -109,7 +109,7 @@ std::unique_ptr<Breakpoint> BreakpointTable::getBreakpoint(uint64_t address)
 bool BreakpointTable::isBreakpoint(const std::string &source_file,
                                    unsigned int line_number)
 {
-	for (const DebugInfo::SourceLine &line : debug_info->getAllLines())
+	for (const DebugInfo::SourceLine &line : debug_info->getSourceFileLines(source_file))
 	{
 		bool is_match = line.file_name == source_file && line.number == line_number;
 		bool is_breakpoint = breakpoints_by_address.find(line.address) != breakpoints_by_address.end();

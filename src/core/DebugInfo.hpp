@@ -46,7 +46,9 @@ public:
 
 	virtual Variable getVariable(const std::string &variable_name, pid_t pid) const = 0;
 	virtual std::optional<Function> getFunction(uint64_t address) const = 0;
-	virtual std::vector<SourceLine> getAllLines() const = 0;
+	// virtual std::optional<SourceLine> getLine(uint64_t address) const = 0;
+	virtual std::vector<SourceLine> getFunctionLines(uint64_t address) const = 0;
+	virtual std::vector<SourceLine> getSourceFileLines(const std::string &file_name) const = 0;
 	virtual std::vector<std::string> getSourceFiles() const = 0;
 };
 
@@ -57,7 +59,9 @@ public:
 
 	virtual Variable getVariable(const std::string &variable_name, pid_t pid) const override;
 	virtual std::optional<Function> getFunction(uint64_t address) const override;
-	virtual std::vector<SourceLine> getAllLines() const override;
+	// virtual std::optional<SourceLine> getLine(uint64_t address) const override;
+	virtual std::vector<SourceLine> getFunctionLines(uint64_t address) const override;
+	virtual std::vector<SourceLine> getSourceFileLines(const std::string &file_name) const override;
 	virtual std::vector<std::string> getSourceFiles() const override;
 
 private:

@@ -6,8 +6,9 @@
 #include <unordered_map>
 #include <stdint.h>
 #include <memory>
+#include <optional>
 
-#include "DwarfReader.hpp"
+#include "DIE.hpp"
 
 // Structure containing information about a single source line
 struct Line
@@ -26,18 +27,21 @@ struct Line
 
 // Represents the information presented when performing a call to
 // objdump --dwarf=rawline/decodedline
-// TODO: Should hold line info for all compilation units - not just the one in the constructor
 class DebugLine
 {
 public:
-	DebugLine(DIE &compile_unit_die);
+	DebugLine(const std::vector<DIE> &compile_units);
 
-	std::unique_ptr<std::vector<Line>> getLine(uint64_t line_number);
-	std::vector<Line> getAllLines();
+	// std::optional<Line> getLine(uint64_t address);
+	std::vector<Line> getFunctionLines(uint64_t address);
+	std::vector<Line> getCULines(uint64_t address);
+	std::vector<Line> getCULines(const DIE &compile_unit);
 
 private:
-	std::unordered_map<uint64_t, std::vector<Line>> line_map;
-	std::vector<Line> line_vector;
+	std::vector<DIE> compile_units;
 
-	void insertLine(const Line &line);
+	std::optional<DIE> getCompileUnit(uint64_t address);
+	std::vector<Line> generateLineInfo(const DIE &compile_unit,
+	                                   uint64_t start_address = 0,
+	                                   uint64_t end_address = 0);
 };

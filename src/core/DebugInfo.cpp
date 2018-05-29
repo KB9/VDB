@@ -83,14 +83,47 @@ std::optional<DwarfDebugInfo::Function> DwarfDebugInfo::getFunction(uint64_t add
 	return std::nullopt;
 }
 
-std::vector<DwarfDebugInfo::SourceLine> DwarfDebugInfo::getAllLines() const
+// std::optional<DwarfDebugInfo::SourceLine> DwarfDebugInfo::getLine(uint64_t address) const
+// {
+// 	std::optional<Line> line = dwarf->line()->getLine(address);
+// 	if (line.has_value())
+// 	{
+// 		Line val = line.value();
+// 		return std::optional<DwarfDebugInfo::SourceLine>({val.number, val.address, val.source});
+// 	}
+// 	else
+// 	{
+// 		return std::nullopt;
+// 	}
+// }
+
+std::vector<DwarfDebugInfo::SourceLine> DwarfDebugInfo::getFunctionLines(uint64_t address) const
 {
-	std::vector<DebugInfo::SourceLine> all_lines;
-	for (Line line : dwarf->line()->getAllLines())
+	std::vector<Line> dwarf_lines = dwarf->line()->getFunctionLines(address);
+	std::vector<DwarfDebugInfo::SourceLine> lines;
+	for (const auto &line : dwarf_lines)
+		lines.push_back({line.number, line.address, line.source});
+	return lines;
+}
+
+std::vector<DwarfDebugInfo::SourceLine> DwarfDebugInfo::getSourceFileLines(const std::string &file_name) const
+{
+	std::vector<DIE> compile_units = dwarf->info()->getCompileUnits();
+	for (const auto &cu : compile_units)
 	{
-		all_lines.push_back({line.number, line.address, line.source});
+		std::string name = cu.getAttributeValue<DW_AT_name>().value();
+		std::string dir = cu.getAttributeValue<DW_AT_comp_dir>().value();
+		std::string path = dir + "/" + name;
+		if (file_name == path)
+		{
+			std::vector<Line> dwarf_lines = dwarf->line()->getCULines(cu);
+			std::vector<DwarfDebugInfo::SourceLine> lines;
+			for (const auto &line : dwarf_lines)
+				lines.push_back({line.number, line.address, line.source});
+			return lines;
+		}
 	}
-	return all_lines;
+	return {};
 }
 
 std::vector<std::string> DwarfDebugInfo::getSourceFiles() const
