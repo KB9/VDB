@@ -113,7 +113,13 @@ std::vector<DwarfDebugInfo::SourceLine> DwarfDebugInfo::getSourceFileLines(const
 	{
 		std::string name = cu.getAttributeValue<DW_AT_name>().value();
 		std::string dir = cu.getAttributeValue<DW_AT_comp_dir>().value();
-		std::string path = dir + "/" + name;
+		std::string path;
+		bool is_relative_path = (name.at(0) != '/');
+		if (is_relative_path)
+			path = dir + "/" + name;
+		else
+			path = name;
+
 		if (file_name == path)
 		{
 			std::vector<Line> dwarf_lines = dwarf->line()->getCULines(cu);
