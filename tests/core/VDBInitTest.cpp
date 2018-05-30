@@ -15,6 +15,8 @@ TEST_CASE("VDB initialization handling")
 
 		REQUIRE(success == false);
 		REQUIRE(vdb.isInitialized() == false);
+		REQUIRE(vdb.getDebugInfo() == nullptr);
+		REQUIRE(vdb.getDebugEngine() == nullptr);
 	}
 
 	SECTION("VDB initialization initializes successfully with valid file path")
@@ -23,5 +25,7 @@ TEST_CASE("VDB initialization handling")
 
 		REQUIRE(success == true);
 		REQUIRE(vdb.isInitialized() == true);
+		REQUIRE(vdb.getDebugInfo() != nullptr);
+		REQUIRE(vdb.getDebugEngine() != nullptr);
 	}
 }
