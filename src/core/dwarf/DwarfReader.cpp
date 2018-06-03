@@ -207,5 +207,40 @@ std::optional<DwarfInfoReader::VariableLocExpr> DwarfInfoReader::getVarLocExpr(c
 			return std::make_optional<DwarfInfoReader::VariableLocExpr>(std::move(loc_expr));
 		}
 	}
+
+	// Then look for the variable globally if it isn't found locally
+	loc_expr.frame_base = 0;
+	std::vector<DIE> compile_units = getCompileUnits();
+	for (auto &cu : compile_units)
+	{
+		std::vector<DIE> cu_children = cu.getChildren();
+		for (auto &child : cu_children)
+		{
+			if (child.getTagName() != "DW_TAG_variable")
+				continue;
+
+			// Ensure that the name of this variable matches before getting the
+			// location expression
+			std::string name = child.getAttributeValue<DW_AT_name>().value();
+			if (name != var_name)
+				continue;
+
+			// Ensure the variable has a location expression attribute
+			std::optional<ExprLoc> loc_opt = child.getAttributeValue<DW_AT_location>();
+			if (!loc_opt.has_value())
+				continue;
+
+			// Cast the location op and param and store
+			loc_expr.location_op = ((uint8_t *)loc_opt.value().ptr)[0];
+			loc_expr.location_param = &((uint8_t *)loc_opt.value().ptr)[1];
+
+			// Determine the DIE that represents the type using type offset attribute
+			Dwarf_Off type_offset = child.getAttributeValue<DW_AT_type>().value();
+			loc_expr.type = getDIEByOffset(type_offset);
+
+			return std::make_optional<DwarfInfoReader::VariableLocExpr>(std::move(loc_expr));
+		}
+	}
+
 	return std::nullopt;
 }

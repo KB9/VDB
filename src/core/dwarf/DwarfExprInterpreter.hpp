@@ -19,4 +19,7 @@ public:
 
 private:
 	pid_t target_pid;
+
+	uint64_t decodeDataAddress(uint8_t *op_param);
+	uint64_t decodeStackFrameAddress(uint8_t *op_param, uint8_t frame_base_op_code);
 };
