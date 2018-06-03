@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.9)
 
 project(VDB)
 
+# Enable testing
+enable_testing()
+
 set(BUILD_TESTS OFF CACHE BOOL "Build tests")
 message(STATUS "BUILD_TESTS: " ${BUILD_TESTS})
 
