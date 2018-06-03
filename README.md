@@ -8,3 +8,6 @@ A visual debugger (VDB) which uses Qt and the DWARF debugging format to debug EL
 * Variable watches
 * Stack tracing
 * Source stepping
+
+## Building and Running
+See [BUILD.md](BUILD.md)
