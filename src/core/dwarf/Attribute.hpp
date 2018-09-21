@@ -4,8 +4,8 @@
 #include <string>
 #include <cassert>
 
-#include <dwarf.h>
-#include "libdwarf.h"
+#include <libdwarf/dwarf.h>
+#include <libdwarf/libdwarf.h>
 
 struct ExprLoc
 {

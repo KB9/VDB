@@ -3,8 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include <dwarf.h>
-#include "libdwarf.h"
+#include <libdwarf/dwarf.h>
+#include <libdwarf/libdwarf.h>
 
 #include <string>
 #include <cstring>

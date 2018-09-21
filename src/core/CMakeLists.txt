@@ -30,7 +30,7 @@ target_link_libraries(vdb
 	-lunwind-ptrace
 	-lunwind-generic
 	-lelf
-	${CMAKE_CURRENT_SOURCE_DIR}/libdwarf.a
+	/usr/lib/x86_64-linux-gnu/libdwarf.a
 )
 
 set_property(TARGET vdb PROPERTY POSITION_INDEPENDENT_CODE ON)

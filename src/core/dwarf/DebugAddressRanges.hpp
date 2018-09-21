@@ -3,8 +3,8 @@
 #include <stdint.h>
 #include <vector>
 
-#include "libdwarf.h"
-#include <dwarf.h>
+#include <libdwarf/libdwarf.h>
+#include <libdwarf/dwarf.h>
 
 struct AddressRange
 {

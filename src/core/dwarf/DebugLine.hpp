@@ -1,7 +1,7 @@
 #pragma once
 
-#include "libdwarf.h"
-#include <dwarf.h>
+#include <libdwarf/libdwarf.h>
+#include <libdwarf/dwarf.h>
 
 #include <unordered_map>
 #include <stdint.h>
