@@ -22,4 +22,7 @@ private:
 	std::string deduceStructure(uint64_t address, DIE &struct_die);
 	std::string deduceClass(uint64_t address, DIE &class_die);
 	std::string deduceConst(uint64_t address, const DIE &const_die);
+
+	float decodeFloat(uint64_t data);
+	double decodeDouble(uint64_t data);
 };

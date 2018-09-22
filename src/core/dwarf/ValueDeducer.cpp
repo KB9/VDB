@@ -82,14 +82,18 @@ std::string ValueDeducer::deduceBase(uint64_t address, const DIE &base_die)
 	{
 		if (byte_size == 4)
 		{
-			float value = *((float *)&data);
+			float value = decodeFloat(data);
 			return std::to_string(value);
 		}
 		else if (byte_size == 8)
 		{
-			double value = *((double *)&data);
+			double value = decodeDouble(data);
 			return std::to_string(value);
 		}
+		// else if (byte_size == 16)
+		// {
+		// 	// TODO
+		// }
 	}
 
 	//case DW_ATE_imaginary_float:
@@ -294,4 +298,70 @@ std::string ValueDeducer::deduceConst(uint64_t address, const DIE &const_die)
 	Dwarf_Off type_offset = const_die.getAttributeValue<DW_AT_type>().value();
 	DIE type_die = *(debug_data->info()->getDIEByOffset(type_offset));
 	return deduce(address, type_die);
+}
+
+float ValueDeducer::decodeFloat(uint64_t data)
+{
+	// Decoding according to IEEE-754 single-precision floating-point standard:
+	// - The sign is a single bit.
+	// - The exponent is stored as an 8-bit integer.
+	// - The mantissa is stored as a 23-bit integer.
+	uint64_t sign_bit = (data >> 31) & 1;
+	uint64_t exponent_bits = (data >> 23) & 0xFF;
+	uint64_t mantissa_bits = data & 0x7FFFFF;
+
+	// Calculate the actual exponent value, accounting for exponent underflow.
+	// Exponent underflow occurs when the exponent bits are equal to 0, in
+	// which case the exponent is set to -126 and the leading mantissa
+	// bit (1) is not used.
+	int64_t exponent = (exponent_bits > 0 ? exponent_bits - 127 : -126);
+
+	// Calculate the actual mantissa value (accounting for exponent underflow).
+	// There is an invsibile leading bit, and then the mantissa bits are used
+	// by multiplying the first bit by 1/2, then the second by 1/4, third by
+	// an 1/8, etc.
+	float mantissa = (exponent_bits > 0 ? 1.0f : 0.0f);
+	for (int i = 0; i < 23; i++)
+	{
+		uint64_t mantissa_bit = (mantissa_bits >> (22 - i)) & 1;
+		mantissa += ((float)mantissa_bit * std::pow(2.0f, (float)-(i+1)));
+	}
+
+	// Calculate the floating point value stored in memory.
+	// Note that this may not be the same as the value declared, as the
+	// conversion for storage in memory introduces a degree of inaccuracy..
+	return std::pow(-1.0f, (float)sign_bit) * mantissa * std::pow(2.0f, (float)exponent);
+}
+
+double ValueDeducer::decodeDouble(uint64_t data)
+{
+	// Decoding according to IEEE-754 double-precision floating-point standard:
+	// - The sign is a single bit.
+	// - The exponent is stored as an 11-bit integer.
+	// - The mantissa is stored as a 52-bit integer.
+	uint64_t sign_bit = (data >> 63) & 1;
+	uint64_t exponent_bits = (data >> 52) & 0x7FF;
+	uint64_t mantissa_bits = data & 0xFFFFFFFFFFFFF;
+
+	// Calculate the actual exponent value, accounting for exponent underflow.
+	// Exponent underflow occurs when the exponent bits are equal to 0, in
+	// which case the exponent is set to -1022 and the leading mantissa
+	// bit (1) is not used.
+	int64_t exponent = (exponent_bits > 0 ? exponent_bits - 1023 : -1022);
+
+	// Calculate the actual mantissa value (accounting for exponent underflow).
+	// There is an invsibile leading bit, and then the mantissa bits are used
+	// by multiplying the first bit by 1/2, then the second by 1/4, third by
+	// an 1/8, etc.
+	double mantissa = (exponent_bits > 0 ? 1.0 : 0.0);
+	for (int i = 0; i < 52; i++)
+	{
+		uint64_t mantissa_bit = (mantissa_bits >> (51 - i)) & 1;
+		mantissa += ((double)mantissa_bit * std::pow(2.0, (double)-(i+1)));
+	}
+
+	// Calculate the floating point value stored in memory.
+	// Note that this may not be the same as the value declared, as the
+	// conversion for storage in memory introduces a degree of inaccuracy..
+	return std::pow(-1.0, (double)sign_bit) * mantissa * std::pow(2.0, (double)exponent);
 }
