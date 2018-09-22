@@ -98,4 +98,16 @@ uint64_t DwarfExprInterpreter::decodeStackFrameAddress(uint8_t *op_param,
 
 		return var_addr;
 	}
+	// Use the frame base pointer (rbp) to get this value
+	else if (frame_base_op_code == DW_OP_reg6) // 0x56
+	{
+		// Decode the SLEB128-encoded parameter
+		int64_t offset = decodeSLEB128(op_param);
+
+		Unwinder unwinder(target_pid);
+		uint64_t rbp = unwinder.getRegisterValue(UNW_X86_64_RBP);
+		uint64_t var_addr = rbp + offset;
+
+		return var_addr;
+	}
 }
