@@ -6,7 +6,6 @@
 #include <unordered_map>
 #include <stdint.h>
 #include <memory>
-#include <optional>
 
 #include "../expected.hpp"
 
