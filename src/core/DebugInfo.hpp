@@ -52,6 +52,8 @@ public:
 	virtual std::vector<SourceLine> getFunctionLines(uint64_t address) const = 0;
 	virtual std::vector<SourceLine> getSourceFileLines(const std::string &file_name) const = 0;
 	virtual std::vector<std::string> getSourceFiles() const = 0;
+
+	static std::string toAbsolutePath(const std::string &dir, const std::string &file);
 };
 
 class DwarfDebugInfo : public DebugInfo

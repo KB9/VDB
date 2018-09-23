@@ -11,6 +11,18 @@ std::shared_ptr<DebugInfo> DebugInfo::readFrom(const std::string &executable_nam
 	return std::make_shared<DwarfDebugInfo>(executable_name);
 }
 
+std::string DebugInfo::toAbsolutePath(const std::string &dir, const std::string &name)
+{
+	// If the file path is relative, the directory it was compiled within
+	// will become the prefix. If not, only the name is used as it defines
+	// the fully-qualified path.
+	bool is_relative_path = (name.at(0) != '/');
+	if (is_relative_path)
+		return dir + '/' + name;
+	else
+		return name;
+}
+
 DwarfDebugInfo::DwarfDebugInfo(const std::string &executable_name) :
 	dwarf(std::make_shared<DwarfDebug>(executable_name))
 {
@@ -74,7 +86,7 @@ expected<DwarfDebugInfo::Function, std::string> DwarfDebugInfo::getFunction(uint
 			DIE cu = *(dwarf->info()->getDIEByOffset(cu_offset));
 			std::string file_name = cu.getAttributeValue<DW_AT_name>().value();
 			std::string file_dir = cu.getAttributeValue<DW_AT_comp_dir>().value();
-			function.decl_file = file_dir + "/" + file_name;
+			function.decl_file = toAbsolutePath(file_dir, file_name);
 			function.decl_line = sub.getAttributeValue<DW_AT_decl_line>().value();
 
 			return function;
@@ -113,12 +125,7 @@ std::vector<DwarfDebugInfo::SourceLine> DwarfDebugInfo::getSourceFileLines(const
 	{
 		std::string name = cu.getAttributeValue<DW_AT_name>().value();
 		std::string dir = cu.getAttributeValue<DW_AT_comp_dir>().value();
-		std::string path;
-		bool is_relative_path = (name.at(0) != '/');
-		if (is_relative_path)
-			path = dir + "/" + name;
-		else
-			path = name;
+		std::string path = toAbsolutePath(dir, name);
 
 		if (file_name == path)
 		{
@@ -139,14 +146,7 @@ std::vector<std::string> DwarfDebugInfo::getSourceFiles() const
 	std::vector<SourceFile> files = sourceFiles(dwarf);
 	for (const auto &file : files)
 	{
-		// If the file path is relative, the directory it was compiled within
-		// will become the prefix. If not, only the name is used as it defines
-		// the fully-qualified path.
-		bool is_relative_path = (file.name.at(0) != '/');
-		if (is_relative_path)
-			file_names.push_back(file.dir + '/' + file.name);
-		else
-			file_names.push_back(file.name);
+		file_names.push_back(toAbsolutePath(file.dir, file.name));
 	}
 	return file_names;
 }
