@@ -8,7 +8,11 @@
 #include <memory>
 #include <optional>
 
+#include "../expected.hpp"
+
 #include "DIE.hpp"
+
+using namespace nonstd;
 
 // Structure containing information about a single source line
 struct Line
@@ -40,7 +44,7 @@ public:
 private:
 	std::vector<DIE> compile_units;
 
-	std::optional<DIE> getCompileUnit(uint64_t address);
+	expected<DIE, std::string> getCompileUnit(uint64_t address);
 	std::vector<Line> generateLineInfo(const DIE &compile_unit,
 	                                   uint64_t start_address = 0,
 	                                   uint64_t end_address = 0);

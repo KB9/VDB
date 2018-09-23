@@ -142,8 +142,8 @@ std::vector<DIE> DwarfInfoReader::getChildrenRecursive(DIE &die)
 	return all_children;
 }
 
-std::optional<DwarfInfoReader::VariableLocExpr> DwarfInfoReader::getVarLocExpr(const std::string &var_name,
-                                                                               pid_t pid)
+expected<DwarfInfoReader::VariableLocExpr, std::string> DwarfInfoReader::getVarLocExpr(const std::string &var_name,
+                                                                                       pid_t pid)
 {
 	DwarfInfoReader::VariableLocExpr loc_expr;
 
@@ -155,25 +155,25 @@ std::optional<DwarfInfoReader::VariableLocExpr> DwarfInfoReader::getVarLocExpr(c
 	{
 		// Ensure that the variable is within the address range of the function
 		// the IP is currently within
-		auto low_pc_opt = sub.getAttributeValue<DW_AT_low_pc>();
-		auto high_pc_opt = sub.getAttributeValue<DW_AT_high_pc>();
-		if (!low_pc_opt.has_value() || !high_pc_opt.has_value())
+		auto expected_low_pc = sub.getAttributeValue<DW_AT_low_pc>();
+		auto expected_high_pc = sub.getAttributeValue<DW_AT_high_pc>();
+		if (!expected_low_pc || !expected_high_pc)
 			continue;
 
 		user_regs_struct regs;
 		ptrace(PTRACE_GETREGS, pid, 0, &regs);
-		uint64_t low_pc = low_pc_opt.value();
-		uint64_t high_pc = high_pc_opt.value();
+		uint64_t low_pc = expected_low_pc.value();
+		uint64_t high_pc = expected_high_pc.value();
 		if (regs.rip < low_pc || regs.rip >= (low_pc + high_pc))
 			continue;
 
 		// Determine if this subprogram DIE has a frame base attribute
-		std::optional<ExprLoc> frame_base_opt = sub.getAttributeValue<DW_AT_frame_base>();
-		if (!frame_base_opt.has_value())
+		auto expected_frame_base = sub.getAttributeValue<DW_AT_frame_base>();
+		if (!expected_frame_base)
 			continue;
 
 		// Cast the frame base exprloc and store
-		loc_expr.frame_base = ((uint8_t *)frame_base_opt.value().ptr)[0];
+		loc_expr.frame_base = ((uint8_t *)expected_frame_base.value().ptr)[0];
 
 		// Check all of this subprogram's children to check for a local variable
 		// with the same name
@@ -192,19 +192,19 @@ std::optional<DwarfInfoReader::VariableLocExpr> DwarfInfoReader::getVarLocExpr(c
 				continue;
 
 			// Ensure the variable has a location expression attribute
-			std::optional<ExprLoc> loc_opt = child.getAttributeValue<DW_AT_location>();
-			if (!loc_opt.has_value())
+			auto expected_loc = child.getAttributeValue<DW_AT_location>();
+			if (!expected_loc)
 				continue;
 
 			// Cast the location op and param and store
-			loc_expr.location_op = ((uint8_t *)loc_opt.value().ptr)[0];
-			loc_expr.location_param = &((uint8_t *)loc_opt.value().ptr)[1];
+			loc_expr.location_op = ((uint8_t *)expected_loc.value().ptr)[0];
+			loc_expr.location_param = &((uint8_t *)expected_loc.value().ptr)[1];
 
 			// Determine the DIE that represents the type using type offset attribute
 			Dwarf_Off type_offset = child.getAttributeValue<DW_AT_type>().value();
 			loc_expr.type = getDIEByOffset(type_offset);
 
-			return std::make_optional<DwarfInfoReader::VariableLocExpr>(std::move(loc_expr));
+			return loc_expr;
 		}
 	}
 
@@ -226,21 +226,21 @@ std::optional<DwarfInfoReader::VariableLocExpr> DwarfInfoReader::getVarLocExpr(c
 				continue;
 
 			// Ensure the variable has a location expression attribute
-			std::optional<ExprLoc> loc_opt = child.getAttributeValue<DW_AT_location>();
-			if (!loc_opt.has_value())
+			auto expected_loc = child.getAttributeValue<DW_AT_location>();
+			if (!expected_loc)
 				continue;
 
 			// Cast the location op and param and store
-			loc_expr.location_op = ((uint8_t *)loc_opt.value().ptr)[0];
-			loc_expr.location_param = &((uint8_t *)loc_opt.value().ptr)[1];
+			loc_expr.location_op = ((uint8_t *)expected_loc.value().ptr)[0];
+			loc_expr.location_param = &((uint8_t *)expected_loc.value().ptr)[1];
 
 			// Determine the DIE that represents the type using type offset attribute
 			Dwarf_Off type_offset = child.getAttributeValue<DW_AT_type>().value();
 			loc_expr.type = getDIEByOffset(type_offset);
 
-			return std::make_optional<DwarfInfoReader::VariableLocExpr>(std::move(loc_expr));
+			return std::move(loc_expr);
 		}
 	}
 
-	return std::nullopt;
+	return make_unexpected("Could not determine location expression: " + var_name);
 }

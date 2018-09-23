@@ -10,6 +10,9 @@
 #include <libdwarf/dwarf.h>
 #include <libdwarf/libdwarf.h>
 
+#include "../expected.hpp"
+using namespace nonstd;
+
 #include "DIE.hpp"
 
 // This contains the compilation units, and allows access to each of them.
@@ -35,7 +38,7 @@ public:
 		uint8_t *location_param;
 		std::unique_ptr<DIE> type;
 	};
-	std::optional<VariableLocExpr> getVarLocExpr(const std::string &var_name, pid_t pid);
+	expected<VariableLocExpr, std::string> getVarLocExpr(const std::string& var_name, pid_t pid);
 
 private:
 	Dwarf_Debug dbg;

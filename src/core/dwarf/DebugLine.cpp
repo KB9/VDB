@@ -18,11 +18,11 @@ DebugLine::DebugLine(const std::vector<DIE> &compile_units) :
 
 std::vector<Line> DebugLine::getFunctionLines(uint64_t address)
 {
-	std::optional<DIE> compile_unit_opt = getCompileUnit(address);
-	if (not compile_unit_opt.has_value())
+	auto cu_expected = getCompileUnit(address);
+	if (!cu_expected)
 		return {};
 
-	DIE compile_unit = compile_unit_opt.value();
+	DIE compile_unit = cu_expected.value();
 	std::vector<DIE> children = compile_unit.getChildren();
 	while (!children.empty())
 	{
@@ -58,9 +58,9 @@ std::vector<Line> DebugLine::getFunctionLines(uint64_t address)
 
 std::vector<Line> DebugLine::getCULines(uint64_t address)
 {
-	std::optional<DIE> compile_unit_opt = getCompileUnit(address);
-	if (compile_unit_opt.has_value())
-		return generateLineInfo(compile_unit_opt.value());
+	auto cu_expected = getCompileUnit(address);
+	if (!cu_expected)
+		return generateLineInfo(cu_expected.value());
 	else
 		return {};
 }
@@ -70,27 +70,21 @@ std::vector<Line> DebugLine::getCULines(const DIE &compile_unit)
 	return generateLineInfo(compile_unit);
 }
 
-std::optional<DIE> DebugLine::getCompileUnit(uint64_t address)
+expected<DIE, std::string> DebugLine::getCompileUnit(uint64_t address)
 {
-	for (const auto &cu : compile_units)
+	for (const auto& cu : compile_units)
 	{
-		auto low_pc_opt = cu.getAttributeValue<DW_AT_low_pc>();
-		auto high_pc_opt = cu.getAttributeValue<DW_AT_high_pc>();
-
-		if (!low_pc_opt.has_value() || !high_pc_opt.has_value())
-		{
-			procmsg("[DEBUG_LINE] Specified DIE is not a compilation unit DIE!");
+		auto expected_low_pc = cu.getAttributeValue<DW_AT_low_pc>();
+		auto expected_high_pc = cu.getAttributeValue<DW_AT_high_pc>();
+		if (!expected_low_pc || !expected_high_pc)
 			continue;
-		}
 
-		Dwarf_Addr low_pc = low_pc_opt.value();
-		Dwarf_Off high_pc = high_pc_opt.value();
+		Dwarf_Addr low_pc = expected_low_pc.value();
+		Dwarf_Off high_pc = expected_high_pc.value();
 		if (address >= low_pc && address < (low_pc + high_pc))
-		{
-			return std::make_optional<DIE>(cu);
-		}
+			return cu;
 	}
-	return std::nullopt;
+	return make_unexpected("Failed to find compilation unit at address: " + std::to_string(address));
 }
 
 std::vector<Line> DebugLine::generateLineInfo(const DIE &compile_unit,

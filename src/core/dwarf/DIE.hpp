@@ -8,6 +8,9 @@
 #include <libdwarf/dwarf.h>
 #include <libdwarf/libdwarf.h>
 
+#include "../expected.hpp"
+using namespace nonstd;
+
 #include "Attribute.hpp"
 
 class DIE
@@ -16,7 +19,7 @@ public:
 	DIE(const Dwarf_Debug &dbg, const Dwarf_Die &die);
 
 	template <Dwarf_Half CODE>
-	std::optional<typename Attribute<CODE>::value_type> getAttributeValue() const
+	expected<typename Attribute<CODE>::value_type, std::string> getAttributeValue() const
 	{
 		using ValueType = typename Attribute<CODE>::value_type;
 
@@ -26,17 +29,15 @@ public:
 
 		// Get the list of attributes and the list size
 		if (dwarf_attrlist(die, &attrs, &attr_count, &err) != DW_DLV_OK)
-		{
-			return std::nullopt;
-		}
+			return make_unexpected("Failed to read DIE attributes");
 
 		// Loop through all attributes
 		for (int i = 0; i < attr_count; i++)
 		{
 			if (Attribute<CODE>::isMatchingType(attrs[i]))
-				return std::make_optional<ValueType>(Attribute<CODE>::value(attrs[i]));
+				return Attribute<CODE>::value(attrs[i]);
 		}
-		return std::nullopt;
+		return make_unexpected("Failed to find matching DIE attribute");
 	}
 
 	template <Dwarf_Half CODE>
