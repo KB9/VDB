@@ -4,9 +4,11 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <optional>
 
 #include <sys/types.h>
+
+#include "expected.hpp"
+using namespace nonstd;
 
 class DwarfDebug;
 
@@ -45,7 +47,7 @@ public:
 	static std::shared_ptr<DebugInfo> readFrom(const std::string &executable_name);
 
 	virtual Variable getVariable(const std::string &variable_name, pid_t pid) const = 0;
-	virtual std::optional<Function> getFunction(uint64_t address) const = 0;
+	virtual expected<Function, std::string> getFunction(uint64_t address) const = 0;
 	// virtual std::optional<SourceLine> getLine(uint64_t address) const = 0;
 	virtual std::vector<SourceLine> getFunctionLines(uint64_t address) const = 0;
 	virtual std::vector<SourceLine> getSourceFileLines(const std::string &file_name) const = 0;
@@ -58,7 +60,7 @@ public:
 	DwarfDebugInfo(const std::string &executable_name);
 
 	virtual Variable getVariable(const std::string &variable_name, pid_t pid) const override;
-	virtual std::optional<Function> getFunction(uint64_t address) const override;
+	virtual expected<Function, std::string> getFunction(uint64_t address) const override;
 	// virtual std::optional<SourceLine> getLine(uint64_t address) const override;
 	virtual std::vector<SourceLine> getFunctionLines(uint64_t address) const override;
 	virtual std::vector<SourceLine> getSourceFileLines(const std::string &file_name) const override;

@@ -46,23 +46,23 @@ DwarfDebugInfo::Variable DwarfDebugInfo::getVariable(const std::string &variable
 	return var;
 }
 
-std::optional<DwarfDebugInfo::Function> DwarfDebugInfo::getFunction(uint64_t address) const
+expected<DwarfDebugInfo::Function, std::string> DwarfDebugInfo::getFunction(uint64_t address) const
 {
 	DIEMatcher matcher;
 	matcher.setTags({"DW_TAG_subprogram"});
 	std::vector<DIE> subprograms = dwarf->info()->getDIEs(matcher);
 	for (auto sub : subprograms)
 	{
-		auto low_pc_opt = sub.getAttributeValue<DW_AT_low_pc>();
-		auto high_pc_opt = sub.getAttributeValue<DW_AT_high_pc>();
+		auto expected_low_pc = sub.getAttributeValue<DW_AT_low_pc>();
+		auto expected_high_pc = sub.getAttributeValue<DW_AT_high_pc>();
 
 		// Subprogram DIEs may not have lowpc/highpc address values.
 		// This occurs when they are externally defined from the CU.
-		if (!low_pc_opt.has_value() || !high_pc_opt.has_value())
+		if (!expected_low_pc || !expected_high_pc)
 			continue;
 
-		uint64_t low_pc = low_pc_opt.value();
-		uint64_t high_pc = high_pc_opt.value();
+		uint64_t low_pc = expected_low_pc.value();
+		uint64_t high_pc = expected_high_pc.value();
 		if (address >= low_pc && address < (low_pc + high_pc))
 		{
 			DebugInfo::Function function;
@@ -77,10 +77,10 @@ std::optional<DwarfDebugInfo::Function> DwarfDebugInfo::getFunction(uint64_t add
 			function.decl_file = file_dir + "/" + file_name;
 			function.decl_line = sub.getAttributeValue<DW_AT_decl_line>().value();
 
-			return std::make_optional<DwarfDebugInfo::Function>(function);
+			return function;
 		}
 	}
-	return std::nullopt;
+	return make_unexpected("Failed to find function at address: " + std::to_string(address));
 }
 
 // std::optional<DwarfDebugInfo::SourceLine> DwarfDebugInfo::getLine(uint64_t address) const
