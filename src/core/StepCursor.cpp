@@ -4,33 +4,35 @@
 
 #include "Unwinder.hpp"
 
-StepCursor::StepCursor(std::shared_ptr<DebugInfo> debug_info,
+StepCursor::StepCursor(pid_t pid,
+                       std::shared_ptr<DebugInfo> debug_info,
                        std::shared_ptr<BreakpointTable> user_breakpoints)
 {
+	this->pid = pid;
 	this->debug_info = debug_info;
 	this->user_breakpoints = user_breakpoints;
 }
 
-void StepCursor::stepOver(pid_t pid)
+void StepCursor::stepOver()
 {
 	// Step over a user breakpoint if one is present at the current address
-	if (isStoppedAtUserBreakpoint(pid))
-		stepOverUserBreakpoint(pid);
+	if (isStoppedAtUserBreakpoint())
+		stepOverUserBreakpoint();
 
 	// Single step over the current instruction to avoid getting stuck on a
 	// breakpoint on the same line
-	uint64_t pre_step_address = getCurrentAddress(pid);
-	uint64_t pre_step_ret_address = getReturnAddress(pid);
-	singleStep(pid);
+	uint64_t pre_step_address = getCurrentAddress();
+	uint64_t pre_step_ret_address = getReturnAddress();
+	singleStep();
 
 	// Create breakpoints on every line of this function apart from the current,
 	// and enable them
 	BreakpointTable internal_breakpoints(debug_info);
-	addSubprogramBreakpoints(pid, internal_breakpoints, pre_step_address);
-	addReturnBreakpoint(pid, internal_breakpoints, pre_step_ret_address);
+	addSubprogramBreakpoints(internal_breakpoints, pre_step_address);
+	addReturnBreakpoint(internal_breakpoints, pre_step_ret_address);
 
 	// Continue until the next breakpoint is hit
-	continueExec(pid);
+	continueExec();
 
 	// Disable all internal breakpoints
 	internal_breakpoints.disableBreakpoints(pid);
@@ -38,7 +40,7 @@ void StepCursor::stepOver(pid_t pid)
 	// If it's an internal breakpoint, rewind the IP by 1 so that the
 	// instruction that was hidden by the breakpoint will be the next to be
 	// executed.
-	uint64_t breakpoint_address = getCurrentAddress(pid) - 1;
+	uint64_t breakpoint_address = getCurrentAddress() - 1;
 	if (internal_breakpoints.isBreakpoint(breakpoint_address))
 	{
 		user_regs_struct regs;
@@ -48,33 +50,33 @@ void StepCursor::stepOver(pid_t pid)
 	}
 }
 
-void StepCursor::stepInto(pid_t pid)
+void StepCursor::stepInto()
 {
 	// Step over a user breakpoint if one is present at the current address
-	if (isStoppedAtUserBreakpoint(pid))
-		stepOverUserBreakpoint(pid);
+	if (isStoppedAtUserBreakpoint())
+		stepOverUserBreakpoint();
 
 	// Get the current and return addresses, then single step to avoid a
 	// breakpoint set on the current instruction
-	uint64_t pre_step_address = getCurrentAddress(pid);
-	uint64_t pre_step_ret_address = getReturnAddress(pid);
-	bool has_made_call = isCallInstruction(pid, pre_step_address);
-	singleStep(pid);
+	uint64_t pre_step_address = getCurrentAddress();
+	uint64_t pre_step_ret_address = getReturnAddress();
+	bool has_made_call = isCallInstruction(pre_step_address);
+	singleStep();
 
 	// Initialise and enable breakpoints for all lines in the current function
 	// as well as a breakpoint on the line after the return address
 	BreakpointTable internal_breakpoints(debug_info);
-	addSubprogramBreakpoints(pid, internal_breakpoints, pre_step_address);
-	addReturnBreakpoint(pid, internal_breakpoints, pre_step_ret_address);
+	addSubprogramBreakpoints(internal_breakpoints, pre_step_address);
+	addReturnBreakpoint(internal_breakpoints, pre_step_ret_address);
 
 	// Continue single-stepping until a call instruction is executed or a
 	// breakpoint is encountered
-	while (!hasHitBreakpoint(pid, internal_breakpoints) && !has_made_call)
+	while (!hasHitBreakpoint(internal_breakpoints) && !has_made_call)
 	{
-		uint64_t current_address = getCurrentAddress(pid);
-		has_made_call = isCallInstruction(pid, current_address);
+		uint64_t current_address = getCurrentAddress();
+		has_made_call = isCallInstruction(current_address);
 
-		singleStep(pid);
+		singleStep();
 	}
 
 	// Disable the internal breakpoints
@@ -83,7 +85,7 @@ void StepCursor::stepInto(pid_t pid)
 	// If it's an internal breakpoint, rewind the IP by 1 so that the
 	// instruction that was hidden by the breakpoint will be the next to be
 	// executed.
-	uint64_t breakpoint_address = getCurrentAddress(pid) - 1;
+	uint64_t breakpoint_address = getCurrentAddress() - 1;
 	if (internal_breakpoints.isBreakpoint(breakpoint_address))
 	{
 		user_regs_struct regs;
@@ -93,24 +95,24 @@ void StepCursor::stepInto(pid_t pid)
 	}
 }
 
-void StepCursor::stepOut(pid_t pid)
+void StepCursor::stepOut()
 {
 	// Step over a user breakpoint if one is present at the current address
-	if (isStoppedAtUserBreakpoint(pid))
-		stepOverUserBreakpoint(pid);
+	if (isStoppedAtUserBreakpoint())
+		stepOverUserBreakpoint();
 
 	// Get the return address, then single step to avoid a breakpoint set on the
 	// current instruction
-	uint64_t pre_step_ret_address = getReturnAddress(pid);
-	singleStep(pid);
+	uint64_t pre_step_ret_address = getReturnAddress();
+	singleStep();
 
 	// Initialise and enable a breakpoint for the next line after the return
 	// address
 	BreakpointTable internal_breakpoints(debug_info);
-	addReturnBreakpoint(pid, internal_breakpoints, pre_step_ret_address);
+	addReturnBreakpoint(internal_breakpoints, pre_step_ret_address);
 
 	// Continue execution util a breakpoint is hit
-	continueExec(pid);
+	continueExec();
 
 	// Disable the internal breakpoints
 	internal_breakpoints.disableBreakpoints(pid);
@@ -118,7 +120,7 @@ void StepCursor::stepOut(pid_t pid)
 	// If it's an internal breakpoint, rewind the IP by 1 so that the
 	// instruction that was hidden by the breakpoint will be the next to be
 	// executed.
-	uint64_t breakpoint_address = getCurrentAddress(pid) - 1;
+	uint64_t breakpoint_address = getCurrentAddress() - 1;
 	if (internal_breakpoints.isBreakpoint(breakpoint_address))
 	{
 		user_regs_struct regs;
@@ -128,16 +130,16 @@ void StepCursor::stepOut(pid_t pid)
 	}
 }
 
-uint64_t StepCursor::getCurrentAddress(pid_t pid)
+uint64_t StepCursor::getCurrentAddress()
 {
 	user_regs_struct regs;
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
 	return regs.rip;
 }
 
-uint64_t StepCursor::getCurrentLineNumber(pid_t pid)
+uint64_t StepCursor::getCurrentLineNumber()
 {
-	uint64_t current_address = getCurrentAddress(pid);
+	uint64_t current_address = getCurrentAddress();
 	auto lines = debug_info->getFunctionLines(current_address);
 	for (auto line : lines)
 	{
@@ -149,16 +151,16 @@ uint64_t StepCursor::getCurrentLineNumber(pid_t pid)
 	assert(!"Current instruction address does not belong to a known function!");
 }
 
-std::string StepCursor::getCurrentSourceFile(pid_t pid)
+std::string StepCursor::getCurrentSourceFile()
 {
-	uint64_t current_address = getCurrentAddress(pid);
+	uint64_t current_address = getCurrentAddress();
 	auto expected_function = debug_info->getFunction(current_address);
 	assert(expected_function.has_value() &&
 	       "Current instruction address does not belong to a known function!");
 	return expected_function.value().decl_file;
 }
 
-void StepCursor::addSubprogramBreakpoints(pid_t pid, BreakpointTable &internal,
+void StepCursor::addSubprogramBreakpoints(BreakpointTable &internal,
                                           uint64_t address)
 {
 	// Set breakpoints on lines which don't have a user breakpoint, and which
@@ -178,7 +180,7 @@ void StepCursor::addSubprogramBreakpoints(pid_t pid, BreakpointTable &internal,
 	}
 }
 
-void StepCursor::addReturnBreakpoint(pid_t pid, BreakpointTable &internal, uint64_t address)
+void StepCursor::addReturnBreakpoint(BreakpointTable &internal, uint64_t address)
 {
 	auto lines = debug_info->getFunctionLines(address);
 	uint64_t next_closest_address = std::numeric_limits<uint64_t>::max();
@@ -203,41 +205,41 @@ void StepCursor::addReturnBreakpoint(pid_t pid, BreakpointTable &internal, uint6
 	}
 }
 
-uint64_t StepCursor::getReturnAddress(pid_t pid)
+uint64_t StepCursor::getReturnAddress()
 {
 	Unwinder unwinder(pid);
 	unwinder.unwindStep();
 	return unwinder.getRegisterValue(UNW_REG_IP);
 }
 
-bool StepCursor::isStoppedAtUserBreakpoint(pid_t pid)
+bool StepCursor::isStoppedAtUserBreakpoint()
 {
-	uint64_t breakpoint_address = getCurrentAddress(pid) - 1;
+	uint64_t breakpoint_address = getCurrentAddress() - 1;
 	return user_breakpoints->isBreakpoint(breakpoint_address);
 }
 
-void StepCursor::stepOverUserBreakpoint(pid_t pid)
+void StepCursor::stepOverUserBreakpoint()
 {
-	uint64_t breakpoint_address = getCurrentAddress(pid) - 1;
+	uint64_t breakpoint_address = getCurrentAddress() - 1;
 	Breakpoint &breakpoint = user_breakpoints->getBreakpoint(breakpoint_address);
 	breakpoint.stepOver(pid);
 }
 
-bool StepCursor::isCallInstruction(pid_t pid, uint64_t address)
+bool StepCursor::isCallInstruction(uint64_t address)
 {
 	uint64_t data = ptrace(PTRACE_PEEKTEXT, pid, address, 0);
 	return (data & 0xE8) == 0xE8;
 }
 
-bool StepCursor::hasHitBreakpoint(pid_t pid, BreakpointTable &internal)
+bool StepCursor::hasHitBreakpoint(BreakpointTable &internal)
 {
-	uint64_t bp_address = getCurrentAddress(pid) - 1;
+	uint64_t bp_address = getCurrentAddress() - 1;
 	bool hit_user_bp = user_breakpoints->isBreakpoint(bp_address);
 	bool hit_internal_bp = internal.isBreakpoint(bp_address);
 	return hit_user_bp || hit_internal_bp;
 }
 
-bool StepCursor::singleStep(pid_t pid)
+bool StepCursor::singleStep()
 {
 	int wait_status;
 	if (ptrace(PTRACE_SINGLESTEP, pid, 0, 0))
@@ -249,7 +251,7 @@ bool StepCursor::singleStep(pid_t pid)
 	return true;
 }
 
-bool StepCursor::continueExec(pid_t pid)
+bool StepCursor::continueExec()
 {
 	int wait_status;
 	if (ptrace(PTRACE_CONT, pid, 0, 0) < 0)

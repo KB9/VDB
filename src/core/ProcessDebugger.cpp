@@ -248,17 +248,17 @@ void ProcessDebugger::performStep(StepCursor &cursor, BreakpointAction action)
 	{
 		case STEP_OVER:
 		{
-			cursor.stepOver(target_pid);
+			cursor.stepOver();
 			break;
 		}
 		case STEP_INTO:
 		{
-			cursor.stepInto(target_pid);
+			cursor.stepInto();
 			break;
 		}
 		case STEP_OUT:
 		{
-			cursor.stepOut(target_pid);
+			cursor.stepOut();
 			break;
 		}
 		default:
@@ -266,8 +266,7 @@ void ProcessDebugger::performStep(StepCursor &cursor, BreakpointAction action)
 	}
 
 	// Report to the frontend message receiver
-	broadcastStep(cursor.getCurrentSourceFile(target_pid),
-	              cursor.getCurrentLineNumber(target_pid));
+	broadcastStep(cursor.getCurrentSourceFile(), cursor.getCurrentLineNumber());
 }
 
 void ProcessDebugger::onBreakpointHit()
@@ -286,7 +285,7 @@ void ProcessDebugger::onBreakpointHit()
 	broadcastBreakpointHit(breakpoint.file_name, breakpoint.line_number);
 
 	// Create the step cursor at the address the program is currently stopped at
-	StepCursor step_cursor(debug_info, breakpoint_table);
+	StepCursor step_cursor(target_pid, debug_info, breakpoint_table);
 
 	// Wait until an action is taken for this particular breakpoint
 	std::unique_lock<std::mutex> lck(mtx);
@@ -311,7 +310,7 @@ void ProcessDebugger::onBreakpointHit()
 
 	// If the step cursor is currently stopped on a user breakpoint, step over
 	// it first to execute the instruction before continuing
-	uint64_t current_address = step_cursor.getCurrentAddress(target_pid);
+	uint64_t current_address = step_cursor.getCurrentAddress();
 	uint64_t potential_user_bp_address = current_address - 1;
 	if (breakpoint_table->isBreakpoint(potential_user_bp_address))
 	{

@@ -20,33 +20,35 @@
 class StepCursor
 {
 public:
-	StepCursor(std::shared_ptr<DebugInfo> debug_info,
+	StepCursor(pid_t pid,
+	           std::shared_ptr<DebugInfo> debug_info,
 	           std::shared_ptr<BreakpointTable> user_breakpoints);
 
-	void stepOver(pid_t pid);
-	void stepInto(pid_t pid);
-	void stepOut(pid_t pid);
+	void stepOver();
+	void stepInto();
+	void stepOut();
 
-	uint64_t getCurrentAddress(pid_t pid);
-	uint64_t getCurrentLineNumber(pid_t pid);
-	std::string getCurrentSourceFile(pid_t pid);
+	uint64_t getCurrentAddress();
+	uint64_t getCurrentLineNumber();
+	std::string getCurrentSourceFile();
 
 private:
+	pid_t pid;
 	std::shared_ptr<DebugInfo> debug_info = nullptr;
 	std::shared_ptr<BreakpointTable> user_breakpoints = nullptr;
 
-	void addSubprogramBreakpoints(pid_t pid, BreakpointTable &internal, uint64_t address);
-	void addReturnBreakpoint(pid_t pid, BreakpointTable &internal, uint64_t address);
+	void addSubprogramBreakpoints(BreakpointTable &internal, uint64_t address);
+	void addReturnBreakpoint(BreakpointTable &internal, uint64_t address);
 
-	uint64_t getReturnAddress(pid_t pid);
+	uint64_t getReturnAddress();
 
-	bool isStoppedAtUserBreakpoint(pid_t pid);
-	void stepOverUserBreakpoint(pid_t pid);
+	bool isStoppedAtUserBreakpoint();
+	void stepOverUserBreakpoint();
 
-	bool isCallInstruction(pid_t pid, uint64_t address);
+	bool isCallInstruction(uint64_t address);
 
-	bool hasHitBreakpoint(pid_t pid, BreakpointTable &internal);
+	bool hasHitBreakpoint(BreakpointTable &internal);
 
-	bool singleStep(pid_t pid);
-	bool continueExec(pid_t pid);
+	bool singleStep();
+	bool continueExec();
 };
