@@ -13,38 +13,40 @@
 #include "DebugInfo.hpp"
 #include "BreakpointTable.hpp"
 
-// Provides functionality for source-level stepping including stepping over
-// lines, stepping into functions and stepping out of functions.
+// This will improve upon the previous step cursor. Instead of checking each
+// instruction to see if a breakpoint is on it, breakpoints will be utilised
+// correctly. There will be no modification of the IP register. Instead,
+// information will be deduced from the IP register.
 class StepCursor
 {
 public:
-	StepCursor(uint64_t address, std::shared_ptr<DebugInfo> debug_info,
+	StepCursor(std::shared_ptr<DebugInfo> debug_info,
 	           std::shared_ptr<BreakpointTable> user_breakpoints);
 
 	void stepOver(pid_t pid);
 	void stepInto(pid_t pid);
 	void stepOut(pid_t pid);
 
-	uint64_t getCurrentAddress();
-	uint64_t getCurrentLineNumber();
-	std::string getCurrentSourceFile();
+	uint64_t getCurrentAddress(pid_t pid);
+	uint64_t getCurrentLineNumber(pid_t pid);
+	std::string getCurrentSourceFile(pid_t pid);
 
 private:
 	std::shared_ptr<DebugInfo> debug_info = nullptr;
 	std::shared_ptr<BreakpointTable> user_breakpoints = nullptr;
 
-	// Updated after every step to keep track of the cursor
-	uint64_t address = 0;
-	uint64_t line_number;
-	std::string source_file;
+	void addSubprogramBreakpoints(pid_t pid, BreakpointTable &internal, uint64_t address);
+	void addReturnBreakpoint(pid_t pid, BreakpointTable &internal, uint64_t address);
 
-	uint64_t stepToNextSourceLine(pid_t pid, uint64_t addr,
-	                              bool include_current_addr = false);
-	uint64_t stepToCallingFunction(pid_t pid, uint64_t addr);
-	std::unique_ptr<BreakpointTable> createSubprogramBreakpoints(pid_t pid,
-	                                                             uint64_t addr,
-	                                                             bool include_current_addr);
-	std::unique_ptr<BreakpointTable> createReturnBreakpoint(pid_t pid,
-	                                                        uint64_t addr);
-	void updateTrackingVars(uint64_t addr);
+	uint64_t getReturnAddress(pid_t pid);
+
+	bool isStoppedAtUserBreakpoint(pid_t pid);
+	void stepOverUserBreakpoint(pid_t pid);
+
+	bool isCallInstruction(pid_t pid, uint64_t address);
+
+	bool hasHitBreakpoint(pid_t pid, BreakpointTable &internal);
+
+	bool singleStep(pid_t pid);
+	bool continueExec(pid_t pid);
 };

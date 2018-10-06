@@ -13,6 +13,14 @@ Breakpoint::Breakpoint(void *addr, uint64_t line_number, std::string file_name)
 	procmsg("Breakpoint created: 0x%08x\n", addr);
 }
 
+Breakpoint::Breakpoint(Breakpoint &&other)
+{
+	this->addr = other.addr;
+	this->orig_data = other.orig_data;
+	this->line_number = other.line_number;
+	this->file_name = std::move(other.file_name);
+}
+
 // Enables this breakpoint by replacing the instruction at its assigned address
 // with an 'int 3' trap instruction.
 // The original instruction at the address is saved and can be restored by
@@ -90,4 +98,12 @@ bool Breakpoint::stepOver(pid_t pid)
 	}
 
 	return true;
+}
+
+Breakpoint &Breakpoint::operator=(Breakpoint &&other)
+{
+	this->addr = other.addr;
+	this->orig_data = other.orig_data;
+	this->line_number = other.line_number;
+	this->file_name = std::move(other.file_name);
 }

@@ -27,9 +27,15 @@ public:
 	uint64_t line_number;
 	std::string file_name;
 
+	Breakpoint(const Breakpoint &other) = delete;
+	Breakpoint(Breakpoint &&other);
+
 	void enable(pid_t pid);
 	void disable(pid_t pid);
 	bool stepOver(pid_t pid);
+
+	Breakpoint &operator=(const Breakpoint &other) = delete;
+	Breakpoint &operator=(Breakpoint &&other);
 
 private:
 	Breakpoint(void *addr, uint64_t line_number = 0, std::string file_name = "");

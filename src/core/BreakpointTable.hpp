@@ -19,7 +19,7 @@ public:
 
 	void addBreakpoint(uint64_t address);
 	void removeBreakpoint(uint64_t address);
-	std::unique_ptr<Breakpoint> getBreakpoint(uint64_t address);
+	Breakpoint &getBreakpoint(uint64_t address);
 
 	bool addBreakpoint(const char *source_file, unsigned int line_number);
 	bool removeBreakpoint(const char *source_file, unsigned int line_number);
@@ -27,6 +27,7 @@ public:
 	void enableBreakpoints(pid_t target_pid);
 	void disableBreakpoints(pid_t target_pid);
 
+	bool isBreakpoint(uint64_t address);
 	bool isBreakpoint(const std::string &source_file, unsigned int line_number);
 
 private:

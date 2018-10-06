@@ -12,8 +12,8 @@ void BreakpointTable::addBreakpoint(uint64_t address)
 {
 	mtx.lock();
 	Breakpoint breakpoint((void *)address);
-	std::pair<uint64_t, Breakpoint> entry(address, breakpoint);
-	breakpoints_by_address.insert(entry);
+	auto pair = std::make_pair(address, std::move(breakpoint));
+	breakpoints_by_address.insert(std::move(pair));
 	mtx.unlock();
 }
 
@@ -35,8 +35,8 @@ bool BreakpointTable::addBreakpoint(const char *source_file,
 		if (is_match && is_not_breakpoint)
 		{
 			Breakpoint breakpoint((void *)line.address, line.number, source_file);
-			std::pair<uint64_t, Breakpoint> entry(line.address, breakpoint);
-			breakpoints_by_address.insert(entry);
+			auto pair = std::make_pair(line.address, std::move(breakpoint));
+			breakpoints_by_address.insert(std::move(pair));
 
 			mtx.unlock();
 			return true;
@@ -90,20 +90,15 @@ void BreakpointTable::disableBreakpoints(pid_t target_pid)
 	mtx.unlock();
 }
 
-std::unique_ptr<Breakpoint> BreakpointTable::getBreakpoint(uint64_t address)
+Breakpoint &BreakpointTable::getBreakpoint(uint64_t address)
 {
-	mtx.lock();
-	auto found = breakpoints_by_address.find(address);
-	if (found == breakpoints_by_address.end())
-	{
-		mtx.unlock();
-		return nullptr;
-	}
-	else
-	{
-		mtx.unlock();
-		return std::make_unique<Breakpoint>(breakpoints_by_address.at(address));
-	}
+	return breakpoints_by_address.at(address);
+}
+
+bool BreakpointTable::isBreakpoint(uint64_t address)
+{
+	auto it = breakpoints_by_address.find(address);
+	return it != breakpoints_by_address.end();
 }
 
 bool BreakpointTable::isBreakpoint(const std::string &source_file,

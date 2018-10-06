@@ -266,7 +266,8 @@ void ProcessDebugger::performStep(StepCursor &cursor, BreakpointAction action)
 	}
 
 	// Report to the frontend message receiver
-	broadcastStep(cursor.getCurrentSourceFile(), cursor.getCurrentLineNumber());
+	broadcastStep(cursor.getCurrentSourceFile(target_pid),
+	              cursor.getCurrentLineNumber(target_pid));
 }
 
 void ProcessDebugger::onBreakpointHit()
@@ -276,20 +277,16 @@ void ProcessDebugger::onBreakpointHit()
 	ptrace(PTRACE_GETREGS, target_pid, 0, &regs);
 	procmsg("[DEBUG] Getting breakpoint at address: 0x%08x\n", regs.rip);
 	uint64_t breakpoint_address = regs.rip - 1;
-	std::unique_ptr<Breakpoint> breakpoint =
-		breakpoint_table->getBreakpoint(breakpoint_address);
-
-	// If it is not a valid breakpoint, return
-	if (!breakpoint) return;
+	Breakpoint &breakpoint = breakpoint_table->getBreakpoint(breakpoint_address);
 
 	// DEBUG: Notify that the debug thread is waiting for a breakpoint action
 	procmsg("[BREAKPOINT_ACTION] Waiting for breakpoint action...\n");
 
 	// Notify the frontend that a breakpoint has been hit
-	broadcastBreakpointHit(breakpoint->file_name, breakpoint->line_number);
+	broadcastBreakpointHit(breakpoint.file_name, breakpoint.line_number);
 
 	// Create the step cursor at the address the program is currently stopped at
-	StepCursor step_cursor(breakpoint_address, debug_info, breakpoint_table);
+	StepCursor step_cursor(debug_info, breakpoint_table);
 
 	// Wait until an action is taken for this particular breakpoint
 	std::unique_lock<std::mutex> lck(mtx);
@@ -314,10 +311,13 @@ void ProcessDebugger::onBreakpointHit()
 
 	// If the step cursor is currently stopped on a user breakpoint, step over
 	// it first to execute the instruction before continuing
-	std::unique_ptr<Breakpoint> user_bp =
-		breakpoint_table->getBreakpoint(step_cursor.getCurrentAddress());
-	if (user_bp != nullptr)
-		user_bp->stepOver(target_pid);
+	uint64_t current_address = step_cursor.getCurrentAddress(target_pid);
+	uint64_t potential_user_bp_address = current_address - 1;
+	if (breakpoint_table->isBreakpoint(potential_user_bp_address))
+	{
+		Breakpoint &user_bp = breakpoint_table->getBreakpoint(potential_user_bp_address);
+		user_bp.stepOver(target_pid);
+	}
 
 	// Reset the breakpoint action
 	breakpoint_action = UNDEFINED;
