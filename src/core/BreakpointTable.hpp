@@ -11,6 +11,7 @@
 
 #include "Breakpoint.hpp"
 #include "DebugInfo.hpp"
+#include "ProcessTracer.hpp"
 
 class BreakpointTable
 {
@@ -24,8 +25,8 @@ public:
 	bool addBreakpoint(const char *source_file, unsigned int line_number);
 	bool removeBreakpoint(const char *source_file, unsigned int line_number);
 
-	void enableBreakpoints(pid_t target_pid);
-	void disableBreakpoints(pid_t target_pid);
+	void enableBreakpoints(ProcessTracer& tracer);
+	void disableBreakpoints(ProcessTracer& tracer);
 
 	bool isBreakpoint(uint64_t address);
 	bool isBreakpoint(const std::string &source_file, unsigned int line_number);

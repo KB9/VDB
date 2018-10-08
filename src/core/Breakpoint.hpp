@@ -17,12 +17,14 @@
 #include <stdint.h>
 #include <string>
 
+#include "ProcessTracer.hpp"
+
 class Breakpoint
 {
 public:
 	friend class BreakpointTable;
 
-	void *addr;
+	uint64_t addr;
 	uint64_t orig_data;
 	uint64_t line_number;
 	std::string file_name;
@@ -30,13 +32,13 @@ public:
 	Breakpoint(const Breakpoint &other) = delete;
 	Breakpoint(Breakpoint &&other);
 
-	void enable(pid_t pid);
-	void disable(pid_t pid);
-	bool stepOver(pid_t pid);
+	void enable(ProcessTracer& tracer);
+	void disable(ProcessTracer& tracer);
+	bool stepOver(ProcessTracer& tracer);
 
 	Breakpoint &operator=(const Breakpoint &other) = delete;
 	Breakpoint &operator=(Breakpoint &&other);
 
 private:
-	Breakpoint(void *addr, uint64_t line_number = 0, std::string file_name = "");
+	Breakpoint(uint64_t addr, uint64_t line_number = 0, std::string file_name = "");
 };

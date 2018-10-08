@@ -21,6 +21,7 @@ add_library(vdb SHARED
 	DebugEngine.cpp
 	DebugInfo.cpp
 	ProcessDebugger.cpp
+	ProcessTracer.cpp
 	StepCursor.cpp
 	Unwinder.cpp
 	vdb.cpp

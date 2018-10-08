@@ -4,142 +4,132 @@
 
 #include "Unwinder.hpp"
 
-StepCursor::StepCursor(pid_t pid,
-                       std::shared_ptr<DebugInfo> debug_info,
+StepCursor::StepCursor(std::shared_ptr<DebugInfo> debug_info,
                        std::shared_ptr<BreakpointTable> user_breakpoints)
 {
-	this->pid = pid;
 	this->debug_info = debug_info;
 	this->user_breakpoints = user_breakpoints;
 }
 
-void StepCursor::stepOver()
+void StepCursor::stepOver(ProcessTracer& tracer)
 {
 	// Step over a user breakpoint if one is present at the current address
-	if (isStoppedAtUserBreakpoint())
-		stepOverUserBreakpoint();
+	if (isStoppedAtUserBreakpoint(tracer))
+		stepOverUserBreakpoint(tracer);
 
 	// Single step over the current instruction to avoid getting stuck on a
 	// breakpoint on the same line
-	uint64_t pre_step_address = getCurrentAddress();
-	uint64_t pre_step_ret_address = getReturnAddress();
-	singleStep();
+	uint64_t pre_step_address = getCurrentAddress(tracer);
+	uint64_t pre_step_ret_address = getReturnAddress(tracer.traceePID());
+	tracer.singleStepExec();
 
 	// Create breakpoints on every line of this function apart from the current,
 	// and enable them
 	BreakpointTable internal_breakpoints(debug_info);
-	addSubprogramBreakpoints(internal_breakpoints, pre_step_address);
-	addReturnBreakpoint(internal_breakpoints, pre_step_ret_address);
+	addSubprogramBreakpoints(internal_breakpoints, tracer, pre_step_address);
+	addReturnBreakpoint(internal_breakpoints, tracer, pre_step_ret_address);
 
 	// Continue until the next breakpoint is hit
-	continueExec();
+	tracer.continueExec();
 
 	// Disable all internal breakpoints
-	internal_breakpoints.disableBreakpoints(pid);
+	internal_breakpoints.disableBreakpoints(tracer);
 
 	// If it's an internal breakpoint, rewind the IP by 1 so that the
 	// instruction that was hidden by the breakpoint will be the next to be
 	// executed.
-	uint64_t breakpoint_address = getCurrentAddress() - 1;
+	uint64_t breakpoint_address = getCurrentAddress(tracer) - 1;
 	if (internal_breakpoints.isBreakpoint(breakpoint_address))
 	{
-		user_regs_struct regs;
-		ptrace(PTRACE_GETREGS, pid, 0, &regs);
-		regs.rip = breakpoint_address;
-		ptrace(PTRACE_SETREGS, pid, 0, &regs);
+		rewindIP(tracer);
 	}
 }
 
-void StepCursor::stepInto()
+void StepCursor::stepInto(ProcessTracer& tracer)
 {
 	// Step over a user breakpoint if one is present at the current address
-	if (isStoppedAtUserBreakpoint())
-		stepOverUserBreakpoint();
+	if (isStoppedAtUserBreakpoint(tracer))
+		stepOverUserBreakpoint(tracer);
 
 	// Get the current and return addresses, then single step to avoid a
 	// breakpoint set on the current instruction
-	uint64_t pre_step_address = getCurrentAddress();
-	uint64_t pre_step_ret_address = getReturnAddress();
-	bool has_made_call = isCallInstruction(pre_step_address);
-	singleStep();
+	uint64_t pre_step_address = getCurrentAddress(tracer);
+	uint64_t pre_step_ret_address = getReturnAddress(tracer.traceePID());
+	bool has_made_call = isCallInstruction(pre_step_address, tracer);
+	tracer.singleStepExec();
 
 	// Initialise and enable breakpoints for all lines in the current function
 	// as well as a breakpoint on the line after the return address
 	BreakpointTable internal_breakpoints(debug_info);
-	addSubprogramBreakpoints(internal_breakpoints, pre_step_address);
-	addReturnBreakpoint(internal_breakpoints, pre_step_ret_address);
+	addSubprogramBreakpoints(internal_breakpoints, tracer, pre_step_address);
+	addReturnBreakpoint(internal_breakpoints, tracer, pre_step_ret_address);
 
 	// Continue single-stepping until a call instruction is executed or a
 	// breakpoint is encountered
-	while (!hasHitBreakpoint(internal_breakpoints) && !has_made_call)
+	while (!hasHitBreakpoint(internal_breakpoints, tracer) && !has_made_call)
 	{
-		uint64_t current_address = getCurrentAddress();
-		has_made_call = isCallInstruction(current_address);
+		uint64_t current_address = getCurrentAddress(tracer);
+		has_made_call = isCallInstruction(current_address, tracer);
 
-		singleStep();
+		tracer.singleStepExec();
 	}
 
 	// Disable the internal breakpoints
-	internal_breakpoints.disableBreakpoints(pid);
+	internal_breakpoints.disableBreakpoints(tracer);
 
 	// If it's an internal breakpoint, rewind the IP by 1 so that the
 	// instruction that was hidden by the breakpoint will be the next to be
 	// executed.
-	uint64_t breakpoint_address = getCurrentAddress() - 1;
+	uint64_t breakpoint_address = getCurrentAddress(tracer) - 1;
 	if (internal_breakpoints.isBreakpoint(breakpoint_address))
 	{
-		user_regs_struct regs;
-		ptrace(PTRACE_GETREGS, pid, 0, &regs);
-		regs.rip = breakpoint_address;
-		ptrace(PTRACE_SETREGS, pid, 0, &regs);
+		rewindIP(tracer);
 	}
 }
 
-void StepCursor::stepOut()
+void StepCursor::stepOut(ProcessTracer& tracer)
 {
 	// Step over a user breakpoint if one is present at the current address
-	if (isStoppedAtUserBreakpoint())
-		stepOverUserBreakpoint();
+	if (isStoppedAtUserBreakpoint(tracer))
+		stepOverUserBreakpoint(tracer);
 
 	// Get the return address, then single step to avoid a breakpoint set on the
 	// current instruction
-	uint64_t pre_step_ret_address = getReturnAddress();
-	singleStep();
+	uint64_t pre_step_ret_address = getReturnAddress(tracer.traceePID());
+	tracer.singleStepExec();
 
 	// Initialise and enable a breakpoint for the next line after the return
 	// address
 	BreakpointTable internal_breakpoints(debug_info);
-	addReturnBreakpoint(internal_breakpoints, pre_step_ret_address);
+	addReturnBreakpoint(internal_breakpoints, tracer, pre_step_ret_address);
 
 	// Continue execution util a breakpoint is hit
-	continueExec();
+	tracer.continueExec();
 
 	// Disable the internal breakpoints
-	internal_breakpoints.disableBreakpoints(pid);
+	internal_breakpoints.disableBreakpoints(tracer);
 
 	// If it's an internal breakpoint, rewind the IP by 1 so that the
 	// instruction that was hidden by the breakpoint will be the next to be
 	// executed.
-	uint64_t breakpoint_address = getCurrentAddress() - 1;
+	uint64_t breakpoint_address = getCurrentAddress(tracer) - 1;
 	if (internal_breakpoints.isBreakpoint(breakpoint_address))
 	{
-		user_regs_struct regs;
-		ptrace(PTRACE_GETREGS, pid, 0, &regs);
-		regs.rip = breakpoint_address;
-		ptrace(PTRACE_SETREGS, pid, 0, &regs);
+		rewindIP(tracer);
 	}
 }
 
-uint64_t StepCursor::getCurrentAddress()
+uint64_t StepCursor::getCurrentAddress(ProcessTracer& tracer)
 {
-	user_regs_struct regs;
-	ptrace(PTRACE_GETREGS, pid, 0, &regs);
+	auto expected_regs = tracer.getRegisters();
+	assert(expected_regs.has_value());
+	user_regs_struct regs = expected_regs.value();
 	return regs.rip;
 }
 
-uint64_t StepCursor::getCurrentLineNumber()
+uint64_t StepCursor::getCurrentLineNumber(ProcessTracer& tracer)
 {
-	uint64_t current_address = getCurrentAddress();
+	uint64_t current_address = getCurrentAddress(tracer);
 	auto lines = debug_info->getFunctionLines(current_address);
 	for (auto line : lines)
 	{
@@ -151,9 +141,9 @@ uint64_t StepCursor::getCurrentLineNumber()
 	assert(!"Current instruction address does not belong to a known function!");
 }
 
-std::string StepCursor::getCurrentSourceFile()
+std::string StepCursor::getCurrentSourceFile(ProcessTracer& tracer)
 {
-	uint64_t current_address = getCurrentAddress();
+	uint64_t current_address = getCurrentAddress(tracer);
 	auto expected_function = debug_info->getFunction(current_address);
 	assert(expected_function.has_value() &&
 	       "Current instruction address does not belong to a known function!");
@@ -161,6 +151,7 @@ std::string StepCursor::getCurrentSourceFile()
 }
 
 void StepCursor::addSubprogramBreakpoints(BreakpointTable &internal,
+                                          ProcessTracer& tracer,
                                           uint64_t address)
 {
 	// Set breakpoints on lines which don't have a user breakpoint, and which
@@ -174,13 +165,15 @@ void StepCursor::addSubprogramBreakpoints(BreakpointTable &internal,
 		    used_lines.find(line.number) == used_lines.end())
 		{
 			internal.addBreakpoint(line.address);
-			internal.getBreakpoint(line.address).enable(pid);
+			internal.getBreakpoint(line.address).enable(tracer);
 			used_lines.insert(line.number);
 		}
 	}
 }
 
-void StepCursor::addReturnBreakpoint(BreakpointTable &internal, uint64_t address)
+void StepCursor::addReturnBreakpoint(BreakpointTable &internal,
+                                     ProcessTracer& tracer,
+                                     uint64_t address)
 {
 	auto lines = debug_info->getFunctionLines(address);
 	uint64_t next_closest_address = std::numeric_limits<uint64_t>::max();
@@ -201,64 +194,51 @@ void StepCursor::addReturnBreakpoint(BreakpointTable &internal, uint64_t address
 	    address_found)
 	{
 		internal.addBreakpoint(next_closest_address);
-		internal.getBreakpoint(next_closest_address).enable(pid);
+		internal.getBreakpoint(next_closest_address).enable(tracer);
 	}
 }
 
-uint64_t StepCursor::getReturnAddress()
+uint64_t StepCursor::getReturnAddress(pid_t pid)
 {
 	Unwinder unwinder(pid);
 	unwinder.unwindStep();
 	return unwinder.getRegisterValue(UNW_REG_IP);
 }
 
-bool StepCursor::isStoppedAtUserBreakpoint()
+bool StepCursor::isStoppedAtUserBreakpoint(ProcessTracer& tracer)
 {
-	uint64_t breakpoint_address = getCurrentAddress() - 1;
+	uint64_t breakpoint_address = getCurrentAddress(tracer) - 1;
 	return user_breakpoints->isBreakpoint(breakpoint_address);
 }
 
-void StepCursor::stepOverUserBreakpoint()
+void StepCursor::stepOverUserBreakpoint(ProcessTracer& tracer)
 {
-	uint64_t breakpoint_address = getCurrentAddress() - 1;
+	uint64_t breakpoint_address = getCurrentAddress(tracer) - 1;
 	Breakpoint &breakpoint = user_breakpoints->getBreakpoint(breakpoint_address);
-	breakpoint.stepOver(pid);
+	breakpoint.stepOver(tracer);
 }
 
-bool StepCursor::isCallInstruction(uint64_t address)
+bool StepCursor::isCallInstruction(uint64_t address, ProcessTracer& tracer)
 {
-	uint64_t data = ptrace(PTRACE_PEEKTEXT, pid, address, 0);
+	auto expected_data = tracer.peekText(address);
+	assert(expected_data.has_value());
+	uint64_t data = expected_data.value();
 	return (data & 0xE8) == 0xE8;
 }
 
-bool StepCursor::hasHitBreakpoint(BreakpointTable &internal)
+bool StepCursor::hasHitBreakpoint(BreakpointTable &internal, ProcessTracer& tracer)
 {
-	uint64_t bp_address = getCurrentAddress() - 1;
+	uint64_t bp_address = getCurrentAddress(tracer) - 1;
 	bool hit_user_bp = user_breakpoints->isBreakpoint(bp_address);
 	bool hit_internal_bp = internal.isBreakpoint(bp_address);
 	return hit_user_bp || hit_internal_bp;
 }
 
-bool StepCursor::singleStep()
+void StepCursor::rewindIP(ProcessTracer& tracer)
 {
-	int wait_status;
-	if (ptrace(PTRACE_SINGLESTEP, pid, 0, 0))
-	{
-		perror("ptrace");
-		return false;
-	}
-	wait(&wait_status);
-	return true;
-}
-
-bool StepCursor::continueExec()
-{
-	int wait_status;
-	if (ptrace(PTRACE_CONT, pid, 0, 0) < 0)
-	{
-		perror("ptrace");
-		return false;
-	}
-	wait(&wait_status);
-	return true;
+	auto expected_regs = tracer.getRegisters();
+	assert(expected_regs.has_value());
+	user_regs_struct regs = expected_regs.value();
+	regs.rip = getCurrentAddress(tracer) - 1;
+	tracer.setRegisters(regs);
 }

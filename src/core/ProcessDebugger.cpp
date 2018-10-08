@@ -48,7 +48,7 @@ ProcessDebugger::ProcessDebugger(const std::string& executable_name,
 	breakpoint_table(breakpoint_table)
 {
 	is_debugging = true;
-	debug_thread = std::thread(&ProcessDebugger::threadedDebug, this);
+	debug_thread = std::thread(&ProcessDebugger::runDebugger, this);
 }
 
 ProcessDebugger::~ProcessDebugger()
@@ -102,78 +102,33 @@ bool ProcessDebugger::isDebugging()
 
 // ===== EVERYTHING BELOW THIS LINE IS RUN IN THE PRIVATE DEBUGGER THREAD =====
 
-bool ProcessDebugger::threadedDebug()
-{
-	pid_t child_pid = fork();
-	if (child_pid == 0)
-	{
-		runTarget();
-	}
-	else if (child_pid > 0)
-	{
-		target_pid = child_pid;
-		runDebugger();
-	}
-	else
-	{
-		perror("fork");
-		return false;
-	}
-
-	return true;
-}
-
-bool ProcessDebugger::runTarget()
-{
-	procmsg("Target started. Will run '%s'\n", target_name.c_str());
-
-	// Allow tracing of this process
-	if (ptrace(PTRACE_TRACEME, 0, 0, 0) < 0)
-	{
-		perror("ptrace");
-		return false;
-	}
-
-	// Replace this process's image with the given program
-	execl(target_name.c_str(), target_name.c_str(), 0);
-
-	return false;
-}
-
 bool ProcessDebugger::runDebugger()
 {
-	// Wait for child to stop on its first instruction
-	wait(0);
-	procmsg("Entry point. EIP = 0x%08x\n", getChildInstructionPointer(target_pid));
+	bool is_tracee_started = tracer.start(target_name);
+	if (!is_tracee_started)
+		return false;
 
-	breakpoint_table->enableBreakpoints(target_pid);
-
-	int wait_status;
+	breakpoint_table->enableBreakpoints(tracer);
 
 	while (is_debugging)
 	{
 		// Resume execution
-		if (ptrace(PTRACE_CONT, target_pid, 0, 0) < 0)
-		{
-			perror("ptrace");
+		auto expected_signal = tracer.continueExec();
+		if (!expected_signal.has_value())
 			return false;
-		}
-		wait(&wait_status);
+		int signal = expected_signal.value();
 
 		// If the child process exited
-		if (WIFEXITED(wait_status))
+		if (!tracer.isRunning())
 		{
-			// Stop debugging
 			is_debugging = false;
 			break;
 		}
 		// If the child process was stopped midway through execution
-		else if (WIFSTOPPED(wait_status))
+		else if (tracer.isStopped())
 		{
-			int last_sig = WSTOPSIG(wait_status);
-
 			// If a breakpoint was hit
-			if (last_sig == SIGTRAP)
+			if (signal == SIGTRAP)
 			{
 				procmsg("[DEBUG] Breakpoint hit!\n");
 
@@ -186,7 +141,7 @@ bool ProcessDebugger::runDebugger()
 			else
 			{
 				procmsg("[DEBUG] Child process stopped: ");
-				printProcessSignal(last_sig);
+				printProcessSignal(signal);
 
 				// TODO: Check for other signal types
 				// TODO: Continue debugging instead of exiting debug loop
@@ -248,17 +203,17 @@ void ProcessDebugger::performStep(StepCursor &cursor, BreakpointAction action)
 	{
 		case STEP_OVER:
 		{
-			cursor.stepOver();
+			cursor.stepOver(tracer);
 			break;
 		}
 		case STEP_INTO:
 		{
-			cursor.stepInto();
+			cursor.stepInto(tracer);
 			break;
 		}
 		case STEP_OUT:
 		{
-			cursor.stepOut();
+			cursor.stepOut(tracer);
 			break;
 		}
 		default:
@@ -266,14 +221,17 @@ void ProcessDebugger::performStep(StepCursor &cursor, BreakpointAction action)
 	}
 
 	// Report to the frontend message receiver
-	broadcastStep(cursor.getCurrentSourceFile(), cursor.getCurrentLineNumber());
+	broadcastStep(cursor.getCurrentSourceFile(tracer),
+	              cursor.getCurrentLineNumber(tracer));
 }
 
 void ProcessDebugger::onBreakpointHit()
 {
 	// Get the breakpoint that was hit
-	user_regs_struct regs;
-	ptrace(PTRACE_GETREGS, target_pid, 0, &regs);
+	auto expected_regs = tracer.getRegisters();
+	assert(expected_regs.has_value());
+	user_regs_struct regs = expected_regs.value();
+
 	procmsg("[DEBUG] Getting breakpoint at address: 0x%08x\n", regs.rip);
 	uint64_t breakpoint_address = regs.rip - 1;
 	Breakpoint &breakpoint = breakpoint_table->getBreakpoint(breakpoint_address);
@@ -285,7 +243,7 @@ void ProcessDebugger::onBreakpointHit()
 	broadcastBreakpointHit(breakpoint.file_name, breakpoint.line_number);
 
 	// Create the step cursor at the address the program is currently stopped at
-	StepCursor step_cursor(target_pid, debug_info, breakpoint_table);
+	StepCursor step_cursor(debug_info, breakpoint_table);
 
 	// Wait until an action is taken for this particular breakpoint
 	std::unique_lock<std::mutex> lck(mtx);
@@ -310,12 +268,12 @@ void ProcessDebugger::onBreakpointHit()
 
 	// If the step cursor is currently stopped on a user breakpoint, step over
 	// it first to execute the instruction before continuing
-	uint64_t current_address = step_cursor.getCurrentAddress();
+	uint64_t current_address = step_cursor.getCurrentAddress(tracer);
 	uint64_t potential_user_bp_address = current_address - 1;
 	if (breakpoint_table->isBreakpoint(potential_user_bp_address))
 	{
 		Breakpoint &user_bp = breakpoint_table->getBreakpoint(potential_user_bp_address);
-		user_bp.stepOver(target_pid);
+		user_bp.stepOver(tracer);
 	}
 
 	// Reset the breakpoint action
@@ -325,13 +283,13 @@ void ProcessDebugger::onBreakpointHit()
 void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 {
 	DebugInfo::Variable var = debug_info->getVariable(value_msg->variable_name,
-	                                                  target_pid);
+	                                                  tracer.traceePID());
 	value_msg->value = var.value;
 }
 
 void ProcessDebugger::getStackTrace(GetStackTraceMessage *stack_msg)
 {
-	Unwinder unwinder(target_pid);
+	Unwinder unwinder(tracer.traceePID());
 	stack_msg->stack = unwinder.traceStack();
 	unwinder.reset();
 }

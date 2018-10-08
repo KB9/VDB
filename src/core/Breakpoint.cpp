@@ -4,7 +4,7 @@
 void procmsg(const char *format, ...);
 unsigned getChildInstructionPointer(pid_t child_pid);
 
-Breakpoint::Breakpoint(void *addr, uint64_t line_number, std::string file_name)
+Breakpoint::Breakpoint(uint64_t addr, uint64_t line_number, std::string file_name)
 {
 	this->addr = addr;
 	this->line_number = line_number;
@@ -25,39 +25,42 @@ Breakpoint::Breakpoint(Breakpoint &&other)
 // with an 'int 3' trap instruction.
 // The original instruction at the address is saved and can be restored by
 // disabling this breakpoint.
-void Breakpoint::enable(pid_t pid)
+void Breakpoint::enable(ProcessTracer& tracer)
 {
-	orig_data = ptrace(PTRACE_PEEKTEXT, pid, addr, 0);
-	ptrace(PTRACE_POKETEXT, pid, addr, (orig_data & ~(0xFF)) | 0xCC);
+	auto expected_orig_data = tracer.peekText(addr);
+	assert(expected_orig_data.has_value());
+	orig_data = expected_orig_data.value();
+	tracer.pokeText(addr, (orig_data & ~(0xFF)) | 0xCC);
 
 	procmsg("[DEBUG] Pre-enabled data at 0x%08x: 0x%08x\n", addr, orig_data);
-	procmsg("[DEBUG] Post-enabled data at 0x%08x: 0x%08x\n", addr, ptrace(PTRACE_PEEKTEXT, pid, addr, 0));
+	procmsg("[DEBUG] Post-enabled data at 0x%08x: 0x%08x\n", addr, tracer.peekText(addr).value());
 }
 
 // Disables this breakpoint by replacing the 'int 3' trap instruction at its
 // assigned address with the original instruction.
 // The original instruction at the address is saved and can be restored by
 // enabling this breakpoint.
-void Breakpoint::disable(pid_t pid)
+void Breakpoint::disable(ProcessTracer& tracer)
 {
-	uint64_t data = ptrace(PTRACE_PEEKTEXT, pid, addr, 0);
+	auto expected_data = tracer.peekText(addr);
+	assert(expected_data.has_value());
+	uint64_t data = expected_data.value();
 
     // Ensure that the instruction being replaced is a trap 'int 3' breakpoint instruction
 	assert((data & 0xFF) == 0xCC);
-	ptrace(PTRACE_POKETEXT, pid, addr, (data & ~(0xFF)) | (orig_data & 0xFF));
+	tracer.pokeText(addr, (data & ~(0xFF)) | (orig_data & 0xFF));
 
 	procmsg("[DEBUG] Pre-disabled data at 0x%08x: 0x%08x\n", addr, data);
-	procmsg("[DEBUG] Post-disabled data at 0x%08x: 0x%08x\n", addr, ptrace(PTRACE_PEEKTEXT, pid, addr, 0));
+	procmsg("[DEBUG] Post-disabled data at 0x%08x: 0x%08x\n", addr, tracer.peekText(addr).value());
 }
 
 // Disables this breakpoint, steps over it and then re-enables the breakpoint.
-bool Breakpoint::stepOver(pid_t pid)
+bool Breakpoint::stepOver(ProcessTracer& tracer)
 {
-	user_regs_struct regs;
-	int wait_status;
-
 	// Get registers
-	ptrace(PTRACE_GETREGS, pid, 0, &regs);
+	auto expected_regs = tracer.getRegisters();
+	assert(expected_regs.has_value());
+	user_regs_struct regs = expected_regs.value();
 
 	procmsg("[DEBUG] Resuming from EIP = 0x%08x\n", regs.rip);
 
@@ -74,25 +77,19 @@ bool Breakpoint::stepOver(pid_t pid)
 #elif defined ENV32
 	regs.eip = (long) addr;
 #endif
-	ptrace(PTRACE_SETREGS, pid, 0, &regs);
+	tracer.setRegisters(regs);
 
 	// Temporarily disable this breakpoint
-	disable(pid);
+	disable(tracer);
 
-	procmsg("[DEBUG] Pre-step EIP = 0x%08x\n", getChildInstructionPointer(pid));
-	if (ptrace(PTRACE_SINGLESTEP, pid, 0, 0))
-	{
-		perror("ptrace");
-		return false;
-	}
-	wait(&wait_status);
-	procmsg("[DEBUG] Post-step EIP = 0x%08x\n", getChildInstructionPointer(pid));
+	// Single-step over the instruction
+	tracer.singleStepExec();
 
 	// Re-enable this breakpoint
-	enable(pid);
+	enable(tracer);
 
 	// Check if the child has exited after stepping
-	if (WIFEXITED(wait_status))
+	if (!tracer.isRunning())
 	{
 		return false;
 	}

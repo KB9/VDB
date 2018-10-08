@@ -12,6 +12,7 @@
 
 #include "DebugInfo.hpp"
 #include "BreakpointTable.hpp"
+#include "ProcessTracer.hpp"
 
 // This will improve upon the previous step cursor. Instead of checking each
 // instruction to see if a breakpoint is on it, breakpoints will be utilised
@@ -20,35 +21,34 @@
 class StepCursor
 {
 public:
-	StepCursor(pid_t pid,
-	           std::shared_ptr<DebugInfo> debug_info,
+	StepCursor(std::shared_ptr<DebugInfo> debug_info,
 	           std::shared_ptr<BreakpointTable> user_breakpoints);
 
-	void stepOver();
-	void stepInto();
-	void stepOut();
+	void stepOver(ProcessTracer& tracer);
+	void stepInto(ProcessTracer& tracer);
+	void stepOut(ProcessTracer& tracer);
 
-	uint64_t getCurrentAddress();
-	uint64_t getCurrentLineNumber();
-	std::string getCurrentSourceFile();
+	uint64_t getCurrentAddress(ProcessTracer& tracer);
+	uint64_t getCurrentLineNumber(ProcessTracer& tracer);
+	std::string getCurrentSourceFile(ProcessTracer& tracer);
 
 private:
-	pid_t pid;
 	std::shared_ptr<DebugInfo> debug_info = nullptr;
 	std::shared_ptr<BreakpointTable> user_breakpoints = nullptr;
 
-	void addSubprogramBreakpoints(BreakpointTable &internal, uint64_t address);
-	void addReturnBreakpoint(BreakpointTable &internal, uint64_t address);
+	void addSubprogramBreakpoints(BreakpointTable &internal, ProcessTracer& tracer,
+	                              uint64_t address);
+	void addReturnBreakpoint(BreakpointTable &internal, ProcessTracer& tracer,
+	                         uint64_t address);
 
-	uint64_t getReturnAddress();
+	uint64_t getReturnAddress(pid_t pid);
 
-	bool isStoppedAtUserBreakpoint();
-	void stepOverUserBreakpoint();
+	bool isStoppedAtUserBreakpoint(ProcessTracer& tracer);
+	void stepOverUserBreakpoint(ProcessTracer& tracer);
 
-	bool isCallInstruction(uint64_t address);
+	bool isCallInstruction(uint64_t address, ProcessTracer& tracer);
 
-	bool hasHitBreakpoint(BreakpointTable &internal);
+	bool hasHitBreakpoint(BreakpointTable &internal, ProcessTracer& tracer);
 
-	bool singleStep();
-	bool continueExec();
+	void rewindIP(ProcessTracer& tracer);
 };

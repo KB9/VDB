@@ -18,6 +18,7 @@
 #include <memory>
 #include <string>
 
+#include "ProcessTracer.hpp"
 #include "StepCursor.hpp"
 #include "Unwinder.hpp"
 
@@ -92,7 +93,7 @@ private:
 	std::shared_ptr<DebugInfo> debug_info = nullptr;
 
 	std::string target_name;
-	pid_t target_pid;
+	ProcessTracer tracer;
 
 	std::shared_ptr<BreakpointTable> breakpoint_table = nullptr;
 
@@ -107,8 +108,6 @@ private:
 
 	BreakpointAction breakpoint_action = UNDEFINED;
 
-	bool threadedDebug();
-	bool runTarget();
 	bool runDebugger();
 
 	void onBreakpointHit();
