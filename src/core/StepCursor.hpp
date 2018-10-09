@@ -43,8 +43,8 @@ private:
 
 	uint64_t getReturnAddress(pid_t pid);
 
-	bool isStoppedAtUserBreakpoint(ProcessTracer& tracer);
-	void stepOverUserBreakpoint(ProcessTracer& tracer);
+	bool isStoppedAtBreakpoint(BreakpointTable& table, ProcessTracer& tracer);
+	void stepOverBreakpoint(BreakpointTable& table, ProcessTracer& tracer);
 
 	bool isCallInstruction(uint64_t address, ProcessTracer& tracer);
 
