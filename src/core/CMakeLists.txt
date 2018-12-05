@@ -22,6 +22,7 @@ add_library(vdb SHARED
 	DebugInfo.cpp
 	ELFFile.cpp
 	ProcessDebugger.cpp
+	ProcessMemoryMappings.cpp
 	ProcessTracer.cpp
 	StepCursor.cpp
 	Unwinder.cpp
