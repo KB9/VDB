@@ -156,8 +156,8 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
             painter.setPen(Qt::black);
 
             // Color the number's background red if it has an assigned breakpoint
-            std::shared_ptr<BreakpointTable> table = vdb->getDebugEngine()->getBreakpoints();
-            if (table->isBreakpoint(this->filepath.toStdString(), block_number + 1))
+            std::shared_ptr<DebugEngine> engine = vdb->getDebugEngine();
+            if (engine->isBreakpoint(this->filepath.toStdString().c_str(), block_number + 1))
             {
                 painter.fillRect(QRectF(0, top, line_number_area->width(), fontMetrics().height()), Qt::red);
             }
@@ -193,14 +193,14 @@ unsigned int CodeEditor::getLineNumberFromY(int y)
 
 void CodeEditor::toggleBreakpoint(unsigned int line_number)
 {
-    std::shared_ptr<BreakpointTable> table = vdb->getDebugEngine()->getBreakpoints();
-    if (table->isBreakpoint(this->filepath.toStdString(), line_number))
+    std::shared_ptr<DebugEngine> engine = vdb->getDebugEngine();
+    if (engine->isBreakpoint(this->filepath.toStdString().c_str(), line_number))
     {
-        vdb->getDebugEngine()->getBreakpoints()->removeBreakpoint(filepath.toStdString().c_str(), line_number);
+        engine->removeBreakpoint(filepath.toStdString().c_str(), line_number);
     }
     else
     {
-        vdb->getDebugEngine()->getBreakpoints()->addBreakpoint(filepath.toStdString().c_str(), line_number);
+        engine->addBreakpoint(filepath.toStdString().c_str(), line_number);
     }
 }
 

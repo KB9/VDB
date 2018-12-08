@@ -26,8 +26,6 @@ public:
 
 	uint64_t addr;
 	uint64_t orig_data;
-	uint64_t line_number;
-	std::string file_name;
 
 	Breakpoint(const Breakpoint &other) = delete;
 	Breakpoint(Breakpoint &&other);
@@ -40,5 +38,5 @@ public:
 	Breakpoint &operator=(Breakpoint &&other);
 
 private:
-	Breakpoint(uint64_t addr, uint64_t line_number = 0, std::string file_name = "");
+	Breakpoint(uint64_t addr);
 };

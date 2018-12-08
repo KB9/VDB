@@ -22,7 +22,8 @@ class StepCursor
 {
 public:
 	StepCursor(std::shared_ptr<DebugInfo> debug_info,
-	           std::shared_ptr<BreakpointTable> user_breakpoints);
+	           std::shared_ptr<BreakpointTable> user_breakpoints,
+	           uint64_t load_address_offset);
 
 	void stepOver(ProcessTracer& tracer);
 	void stepInto(ProcessTracer& tracer);
@@ -35,6 +36,7 @@ public:
 private:
 	std::shared_ptr<DebugInfo> debug_info = nullptr;
 	std::shared_ptr<BreakpointTable> user_breakpoints = nullptr;
+	uint64_t load_address_offset;
 
 	void addSubprogramBreakpoints(BreakpointTable &internal, ProcessTracer& tracer,
 	                              uint64_t address);

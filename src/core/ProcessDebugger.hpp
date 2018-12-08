@@ -17,10 +17,13 @@
 
 #include <memory>
 #include <string>
+#include <map>
 
 #include "ProcessTracer.hpp"
 #include "StepCursor.hpp"
 #include "Unwinder.hpp"
+#include "ELFFile.hpp"
+#include "ProcessMemoryMappings.hpp"
 
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
@@ -66,6 +69,17 @@ public:
 	std::string file_name;
 };
 
+struct BreakpointLine
+{
+	uint64_t line_number;
+	std::string file_name;
+
+	bool operator==(const BreakpointLine& other) const
+	{
+		return line_number == other.line_number && file_name == other.file_name;
+	}
+};
+
 // This class is responsible for forking the process and forming the target and
 // debugging process. When running the target process, this class will be
 // responsible for informing the breakpoint listener that a breakpoint has been
@@ -75,7 +89,7 @@ class ProcessDebugger
 public:
 
 	ProcessDebugger(const std::string& executable_name,
-	                std::shared_ptr<BreakpointTable> breakpoint_table,
+	                std::vector<BreakpointLine> breakpoint_lines,
 	                std::shared_ptr<DebugInfo> debug_info);
 	~ProcessDebugger();
 
@@ -95,6 +109,8 @@ private:
 	std::string target_name;
 	ProcessTracer tracer;
 
+	std::vector<BreakpointLine> breakpoint_lines;
+	std::map<uint64_t, BreakpointLine> breakpoint_lines_by_address;
 	std::shared_ptr<BreakpointTable> breakpoint_table = nullptr;
 
 	bool is_debugging;
@@ -108,7 +124,12 @@ private:
 
 	BreakpointAction breakpoint_action = UNDEFINED;
 
+	std::unique_ptr<ELFFile> elf_file = nullptr;
+	std::unique_ptr<ProcessMemoryMappings> memory_mappings = nullptr;
+
 	bool runDebugger();
+
+	void createBreakpoints();
 
 	void onBreakpointHit();
 	void processMessageQueue();
@@ -118,4 +139,6 @@ private:
 
 	void deduceValue(GetValueMessage *value_msg);
 	void getStackTrace(GetStackTraceMessage *stack_msg);
+
+	uint64_t getAbsoluteIP(ProcessTracer& tracer);
 };

@@ -41,11 +41,12 @@ void printProcessSignal(int signal)
 }
 
 ProcessDebugger::ProcessDebugger(const std::string& executable_name,
-                                 std::shared_ptr<BreakpointTable> breakpoint_table,
+                                 std::vector<BreakpointLine> breakpoint_lines,
                                  std::shared_ptr<DebugInfo> debug_info) :
 	debug_info(debug_info),
 	target_name(executable_name),
-	breakpoint_table(breakpoint_table)
+	breakpoint_lines(breakpoint_lines),
+	elf_file(std::make_unique<ELFFile>(executable_name))
 {
 	is_debugging = true;
 	debug_thread = std::thread(&ProcessDebugger::runDebugger, this);
@@ -108,6 +109,9 @@ bool ProcessDebugger::runDebugger()
 	if (!is_tracee_started)
 		return false;
 
+	memory_mappings = std::make_unique<ProcessMemoryMappings>(tracer.traceePID());
+	createBreakpoints();
+
 	breakpoint_table->enableBreakpoints(tracer);
 
 	while (is_debugging)
@@ -155,6 +159,32 @@ bool ProcessDebugger::runDebugger()
 	message_queue_out.push(std::make_unique<TargetExitMessage>());
 
 	return true;
+}
+
+void ProcessDebugger::createBreakpoints()
+{
+	breakpoint_table = std::make_unique<BreakpointTable>();
+
+	uint64_t start_address_offset = 0;
+	if (elf_file->hasPositionIndependentCode())
+	{
+		start_address_offset = memory_mappings->loadAddress();
+	}
+
+	for (const auto& bp_line : breakpoint_lines)
+	{
+		for (const DebugInfo::SourceLine &line : debug_info->getSourceFileLines(bp_line.file_name))
+		{
+			bool is_match = line.file_name == bp_line.file_name && line.number == bp_line.line_number;
+			bool is_not_breakpoint = !breakpoint_table->isBreakpoint(line.address);
+			if (is_match && is_not_breakpoint)
+			{
+				uint64_t bp_address = start_address_offset + line.address;
+				breakpoint_table->addBreakpoint(bp_address);
+				breakpoint_lines_by_address.emplace(bp_address, bp_line);
+			}
+		}
+	}
 }
 
 void ProcessDebugger::processMessageQueue()
@@ -227,23 +257,24 @@ void ProcessDebugger::performStep(StepCursor &cursor, BreakpointAction action)
 
 void ProcessDebugger::onBreakpointHit()
 {
-	// Get the breakpoint that was hit
-	auto expected_regs = tracer.getRegisters();
-	assert(expected_regs.has_value());
-	user_regs_struct regs = expected_regs.value();
-
-	procmsg("[DEBUG] Getting breakpoint at address: 0x%08x\n", regs.rip);
-	uint64_t breakpoint_address = regs.rip - 1;
+	procmsg("[DEBUG] Getting breakpoint at address: 0x%08x\n", getAbsoluteIP(tracer));
+	uint64_t breakpoint_address = getAbsoluteIP(tracer) - 1;
 	Breakpoint &breakpoint = breakpoint_table->getBreakpoint(breakpoint_address);
 
 	// DEBUG: Notify that the debug thread is waiting for a breakpoint action
 	procmsg("[BREAKPOINT_ACTION] Waiting for breakpoint action...\n");
 
 	// Notify the frontend that a breakpoint has been hit
-	broadcastBreakpointHit(breakpoint.file_name, breakpoint.line_number);
+	BreakpointLine line = breakpoint_lines_by_address.at(breakpoint_address);
+	broadcastBreakpointHit(line.file_name, line.line_number);
 
 	// Create the step cursor at the address the program is currently stopped at
-	StepCursor step_cursor(debug_info, breakpoint_table);
+	uint64_t load_address_offset = 0;
+	if (elf_file->hasPositionIndependentCode())
+	{
+		load_address_offset = memory_mappings->loadAddress();
+	}
+	StepCursor step_cursor(debug_info, breakpoint_table, load_address_offset);
 
 	// Wait until an action is taken for this particular breakpoint
 	std::unique_lock<std::mutex> lck(mtx);
@@ -268,8 +299,7 @@ void ProcessDebugger::onBreakpointHit()
 
 	// If the step cursor is currently stopped on a user breakpoint, step over
 	// it first to execute the instruction before continuing
-	uint64_t current_address = step_cursor.getCurrentAddress(tracer);
-	uint64_t potential_user_bp_address = current_address - 1;
+	uint64_t potential_user_bp_address = getAbsoluteIP(tracer) - 1;
 	if (breakpoint_table->isBreakpoint(potential_user_bp_address))
 	{
 		Breakpoint &user_bp = breakpoint_table->getBreakpoint(potential_user_bp_address);
@@ -292,4 +322,13 @@ void ProcessDebugger::getStackTrace(GetStackTraceMessage *stack_msg)
 	Unwinder unwinder(tracer.traceePID());
 	stack_msg->stack = unwinder.traceStack();
 	unwinder.reset();
+}
+
+uint64_t ProcessDebugger::getAbsoluteIP(ProcessTracer& tracer)
+{
+	// Get the breakpoint that was hit
+	auto expected_regs = tracer.getRegisters();
+	assert(expected_regs.has_value());
+	user_regs_struct regs = expected_regs.value();
+	return regs.rip;
 }

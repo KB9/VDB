@@ -24,7 +24,9 @@ public:
 
 	bool run();
 
-	std::shared_ptr<BreakpointTable> getBreakpoints();
+	bool addBreakpoint(const char* source_file, unsigned int line_number);
+	bool removeBreakpoint(const char* source_file, unsigned int line_number);
+	bool isBreakpoint(const char* source_file, unsigned int line_number);
 
 	void stepOver();
 	void stepInto();
@@ -41,5 +43,5 @@ private:
 
 	std::shared_ptr<ProcessDebugger> debugger = nullptr;
 	std::shared_ptr<DebugInfo> debug_info = nullptr;
-	std::shared_ptr<BreakpointTable> breakpoint_table = nullptr;
+	std::vector<BreakpointLine> breakpoint_lines;
 };

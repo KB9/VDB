@@ -2,8 +2,7 @@
 
 #include <cstring>
 
-BreakpointTable::BreakpointTable(std::shared_ptr<DebugInfo> debug_info) :
-	debug_info(debug_info)
+BreakpointTable::BreakpointTable()
 {
 	
 }
@@ -22,48 +21,6 @@ void BreakpointTable::removeBreakpoint(uint64_t address)
 	mtx.lock();
 	breakpoints_by_address.erase(address);
 	mtx.unlock();
-}
-
-bool BreakpointTable::addBreakpoint(const char *source_file,
-                                    unsigned int line_number)
-{
-	mtx.lock();
-	for (const DebugInfo::SourceLine &line : debug_info->getSourceFileLines(source_file))
-	{
-		bool is_match = line.file_name == source_file && line.number == line_number;
-		bool is_not_breakpoint = breakpoints_by_address.find(line.address) == breakpoints_by_address.end();
-		if (is_match && is_not_breakpoint)
-		{
-			Breakpoint breakpoint(line.address, line.number, source_file);
-			auto pair = std::make_pair(line.address, std::move(breakpoint));
-			breakpoints_by_address.insert(std::move(pair));
-
-			mtx.unlock();
-			return true;
-		}
-	}
-	mtx.unlock();
-	return false;
-}
-
-bool BreakpointTable::removeBreakpoint(const char *source_file,
-                                       unsigned int line_number)
-{
-	mtx.lock();
-	for (const DebugInfo::SourceLine &line : debug_info->getSourceFileLines(source_file))
-	{
-		bool is_match = line.file_name == source_file && line.number == line_number;
-		bool is_breakpoint = breakpoints_by_address.find(line.address) != breakpoints_by_address.end();
-		if (is_match && is_breakpoint)
-		{
-			breakpoints_by_address.erase(line.address);
-
-			mtx.unlock();
-			return true;
-		}
-	}
-	mtx.unlock();
-	return false;
 }
 
 void BreakpointTable::enableBreakpoints(ProcessTracer& tracer)
@@ -99,19 +56,4 @@ bool BreakpointTable::isBreakpoint(uint64_t address)
 {
 	auto it = breakpoints_by_address.find(address);
 	return it != breakpoints_by_address.end();
-}
-
-bool BreakpointTable::isBreakpoint(const std::string &source_file,
-                                   unsigned int line_number)
-{
-	for (const DebugInfo::SourceLine &line : debug_info->getSourceFileLines(source_file))
-	{
-		bool is_match = line.file_name == source_file && line.number == line_number;
-		bool is_breakpoint = breakpoints_by_address.find(line.address) != breakpoints_by_address.end();
-		if (is_match && is_breakpoint)
-		{
-			return true;
-		}
-	}
-	return false;
 }

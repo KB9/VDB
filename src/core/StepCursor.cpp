@@ -5,10 +5,12 @@
 #include "Unwinder.hpp"
 
 StepCursor::StepCursor(std::shared_ptr<DebugInfo> debug_info,
-                       std::shared_ptr<BreakpointTable> user_breakpoints)
+                       std::shared_ptr<BreakpointTable> user_breakpoints,
+                       uint64_t load_address_offset)
 {
 	this->debug_info = debug_info;
 	this->user_breakpoints = user_breakpoints;
+	this->load_address_offset = load_address_offset;
 }
 
 void StepCursor::stepOver(ProcessTracer& tracer)
@@ -25,7 +27,7 @@ void StepCursor::stepOver(ProcessTracer& tracer)
 
 	// Create breakpoints on every line of this function apart from the current,
 	// and enable them
-	BreakpointTable internal_breakpoints(debug_info);
+	BreakpointTable internal_breakpoints;
 	addSubprogramBreakpoints(internal_breakpoints, tracer, pre_step_address);
 	addReturnBreakpoint(internal_breakpoints, tracer, pre_step_ret_address);
 
@@ -57,7 +59,7 @@ void StepCursor::stepInto(ProcessTracer& tracer)
 
 	// Initialise and enable breakpoints for all lines in the current function
 	// as well as a breakpoint on the line after the return address
-	BreakpointTable internal_breakpoints(debug_info);
+	BreakpointTable internal_breakpoints;
 	addSubprogramBreakpoints(internal_breakpoints, tracer, pre_step_address);
 	addReturnBreakpoint(internal_breakpoints, tracer, pre_step_ret_address);
 
@@ -94,7 +96,7 @@ void StepCursor::stepOut(ProcessTracer& tracer)
 
 	// Initialise and enable a breakpoint for the next line after the return
 	// address
-	BreakpointTable internal_breakpoints(debug_info);
+	BreakpointTable internal_breakpoints;
 	addReturnBreakpoint(internal_breakpoints, tracer, pre_step_ret_address);
 
 	// Continue execution util a breakpoint is hit
@@ -121,10 +123,11 @@ uint64_t StepCursor::getCurrentAddress(ProcessTracer& tracer)
 uint64_t StepCursor::getCurrentLineNumber(ProcessTracer& tracer)
 {
 	uint64_t current_address = getCurrentAddress(tracer);
-	auto lines = debug_info->getFunctionLines(current_address);
+	uint64_t relative_address = current_address - load_address_offset;
+	auto lines = debug_info->getFunctionLines(relative_address);
 	for (auto line : lines)
 	{
-		if (line.address == current_address)
+		if (line.address == relative_address)
 		{
 			return line.number;
 		}
@@ -135,7 +138,7 @@ uint64_t StepCursor::getCurrentLineNumber(ProcessTracer& tracer)
 std::string StepCursor::getCurrentSourceFile(ProcessTracer& tracer)
 {
 	uint64_t current_address = getCurrentAddress(tracer);
-	auto expected_function = debug_info->getFunction(current_address);
+	auto expected_function = debug_info->getFunction(current_address - load_address_offset);
 	assert(expected_function.has_value() &&
 	       "Current instruction address does not belong to a known function!");
 	return expected_function.value().decl_file;
@@ -147,16 +150,19 @@ void StepCursor::addSubprogramBreakpoints(BreakpointTable &internal,
 {
 	// Set breakpoints on lines which don't have a user breakpoint, and which
 	// aren't the line currently stopped on (if desired)
-	auto lines = debug_info->getFunctionLines(address);
+	uint64_t relative_address = address - load_address_offset;
+	auto lines = debug_info->getFunctionLines(relative_address);
 	std::set<uint64_t> used_lines;
 	for (const auto &line : lines)
 	{
-		if (!user_breakpoints->isBreakpoint(line.address) &&
-		    !internal.isBreakpoint(line.address) &&
+		uint64_t loaded_address = line.address + load_address_offset;
+
+		if (!user_breakpoints->isBreakpoint(loaded_address) &&
+		    !internal.isBreakpoint(loaded_address) &&
 		    used_lines.find(line.number) == used_lines.end())
 		{
-			internal.addBreakpoint(line.address);
-			internal.getBreakpoint(line.address).enable(tracer);
+			internal.addBreakpoint(loaded_address);
+			internal.getBreakpoint(loaded_address).enable(tracer);
 			used_lines.insert(line.number);
 		}
 	}
@@ -166,13 +172,16 @@ void StepCursor::addReturnBreakpoint(BreakpointTable &internal,
                                      ProcessTracer& tracer,
                                      uint64_t address)
 {
-	auto lines = debug_info->getFunctionLines(address);
+	uint64_t relative_address = address - load_address_offset;
+	auto lines = debug_info->getFunctionLines(relative_address);
 	uint64_t next_closest_address = std::numeric_limits<uint64_t>::max();
 	bool address_found = false;
 	for (const auto &line : lines)
 	{
-		bool is_higher_address = line.address >= address;
-		bool is_closer_address = line.address < next_closest_address;
+		uint64_t loaded_address = line.address + load_address_offset;
+
+		bool is_higher_address = loaded_address >= address;
+		bool is_closer_address = loaded_address < next_closest_address;
 		if (is_higher_address && is_closer_address)
 		{
 			next_closest_address = line.address;

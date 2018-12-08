@@ -6,10 +6,9 @@
 std::unique_ptr<StepMessage> stepInto(VDB& vdb, const std::string& source_file, unsigned int source_line)
 {
 	std::shared_ptr<DebugEngine> engine = vdb.getDebugEngine();
-	std::shared_ptr<BreakpointTable> table = engine->getBreakpoints();
 
 	// Set the breakpoint
-	table->addBreakpoint(source_file.c_str(), source_line);
+	engine->addBreakpoint(source_file.c_str(), source_line);
 
 	// Run the target process until it encounters the breakpoint
 	engine->run();
