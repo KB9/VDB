@@ -182,6 +182,11 @@ void ProcessDebugger::createBreakpoints()
 				uint64_t bp_address = start_address_offset + line.address;
 				breakpoint_table->addBreakpoint(bp_address);
 				breakpoint_lines_by_address.emplace(bp_address, bp_line);
+
+				// TODO: By breaking here, you are assuming the first address found is
+				// the lowest address of this source line's assembly. This may be
+				// changed in future versions.
+				break;
 			}
 		}
 	}
