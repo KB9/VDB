@@ -31,14 +31,13 @@ TEST_CASE("Fundamental type value deduction")
 	vdb.init("data/variables");
 
 	std::shared_ptr<DebugEngine> engine = vdb.getDebugEngine();
-	std::shared_ptr<BreakpointTable> table = engine->getBreakpoints();
 
 	// Set the breakpoint location on the return statement
 	const std::string source_file = std::string(VDB_TEST_DIR) + "/data/variables.cpp";
 	const unsigned int source_line = 69;
 
 	// Set the breakpoint
-	table->addBreakpoint(source_file.c_str(), source_line);
+	engine->addBreakpoint(source_file.c_str(), source_line);
 
 	// Run the target process until it encounters the breakpoint
 	engine->run();

@@ -20,7 +20,9 @@ add_library(vdb SHARED
 	BreakpointTable.cpp
 	DebugEngine.cpp
 	DebugInfo.cpp
+	ELFFile.cpp
 	ProcessDebugger.cpp
+	ProcessMemoryMappings.cpp
 	ProcessTracer.cpp
 	StepCursor.cpp
 	Unwinder.cpp

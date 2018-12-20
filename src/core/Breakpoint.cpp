@@ -4,11 +4,9 @@
 void procmsg(const char *format, ...);
 unsigned getChildInstructionPointer(pid_t child_pid);
 
-Breakpoint::Breakpoint(uint64_t addr, uint64_t line_number, std::string file_name)
+Breakpoint::Breakpoint(uint64_t addr)
 {
 	this->addr = addr;
-	this->line_number = line_number;
-	this->file_name = file_name;
 
 	procmsg("Breakpoint created: 0x%08x\n", addr);
 }
@@ -17,8 +15,6 @@ Breakpoint::Breakpoint(Breakpoint &&other)
 {
 	this->addr = other.addr;
 	this->orig_data = other.orig_data;
-	this->line_number = other.line_number;
-	this->file_name = std::move(other.file_name);
 }
 
 // Enables this breakpoint by replacing the instruction at its assigned address
@@ -101,6 +97,4 @@ Breakpoint &Breakpoint::operator=(Breakpoint &&other)
 {
 	this->addr = other.addr;
 	this->orig_data = other.orig_data;
-	this->line_number = other.line_number;
-	this->file_name = std::move(other.file_name);
 }

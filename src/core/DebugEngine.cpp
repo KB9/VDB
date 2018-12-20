@@ -4,7 +4,7 @@ DebugEngine::DebugEngine(const std::string& executable_name, std::shared_ptr<Deb
 	target_name(executable_name),
 	debug_info(debug_info)
 {
-	breakpoint_table = std::make_shared<BreakpointTable>(debug_info);
+
 }
 
 DebugEngine::~DebugEngine()
@@ -14,13 +14,57 @@ DebugEngine::~DebugEngine()
 
 bool DebugEngine::run()
 {
-	debugger = std::make_shared<ProcessDebugger>(target_name, breakpoint_table, debug_info);
+	debugger = std::make_shared<ProcessDebugger>(target_name, breakpoint_lines, debug_info);
 	return true;
 }
 
-std::shared_ptr<BreakpointTable> DebugEngine::getBreakpoints()
+bool DebugEngine::addBreakpoint(const char* source_file, unsigned int line_number)
 {
-	return breakpoint_table;
+	BreakpointLine line;
+	line.line_number = line_number;
+	line.file_name = source_file;
+
+	auto it = std::find(std::begin(breakpoint_lines), std::end(breakpoint_lines), line);
+	bool does_not_exist = it == std::end(breakpoint_lines);
+	if (does_not_exist)
+	{
+		breakpoint_lines.push_back(line);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+bool DebugEngine::removeBreakpoint(const char* source_file, unsigned int line_number)
+{
+	BreakpointLine line;
+	line.line_number = line_number;
+	line.file_name = source_file;
+
+	auto it = std::find(std::begin(breakpoint_lines), std::end(breakpoint_lines), line);
+	bool does_exist = it != std::end(breakpoint_lines);
+	if (does_exist)
+	{
+		breakpoint_lines.erase(it);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+bool DebugEngine::isBreakpoint(const char* source_file, unsigned int line_number)
+{
+	BreakpointLine line;
+	line.line_number = line_number;
+	line.file_name = source_file;
+
+	auto it = std::find(std::begin(breakpoint_lines), std::end(breakpoint_lines), line);
+	bool does_exist = it != std::end(breakpoint_lines);
+	return does_exist;
 }
 
 void DebugEngine::stepOver()
