@@ -184,7 +184,7 @@ void StepCursor::addReturnBreakpoint(BreakpointTable &internal,
 		bool is_closer_address = loaded_address < next_closest_address;
 		if (is_higher_address && is_closer_address)
 		{
-			next_closest_address = line.address;
+			next_closest_address = loaded_address;
 			address_found = true;
 		}
 	}
