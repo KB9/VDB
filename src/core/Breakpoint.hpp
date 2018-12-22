@@ -22,7 +22,7 @@
 class Breakpoint
 {
 public:
-	friend class BreakpointTable;
+	Breakpoint(uint64_t addr);
 
 	uint64_t addr;
 	uint64_t orig_data;
@@ -36,7 +36,4 @@ public:
 
 	Breakpoint &operator=(const Breakpoint &other) = delete;
 	Breakpoint &operator=(Breakpoint &&other);
-
-private:
-	Breakpoint(uint64_t addr);
 };
