@@ -24,6 +24,7 @@ add_library(vdb SHARED
 	ProcessDebugger.cpp
 	ProcessMemoryMappings.cpp
 	ProcessTracer.cpp
+	SharedObjectObserver.cpp
 	StepCursor.cpp
 	Unwinder.cpp
 	vdb.cpp
