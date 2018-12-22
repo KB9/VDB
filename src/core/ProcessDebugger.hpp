@@ -24,6 +24,7 @@
 #include "Unwinder.hpp"
 #include "ELFFile.hpp"
 #include "ProcessMemoryMappings.hpp"
+#include "SharedObjectObserver.hpp"
 
 // FOWARD DECLARATION [TODO: REMOVE]
 void procmsg(const char* format, ...);
@@ -127,11 +128,14 @@ private:
 	std::unique_ptr<ELFFile> elf_file = nullptr;
 	std::unique_ptr<ProcessMemoryMappings> memory_mappings = nullptr;
 
+	SharedObjectObserver so_observer;
+
 	bool runDebugger();
 
 	void createBreakpoints();
 
 	void onBreakpointHit();
+	void onUserBreakpointHit();
 	void processMessageQueue();
 	void broadcastBreakpointHit(const std::string &file_name, uint64_t line_number);
 	void performStep(StepCursor &cursor, BreakpointAction action);

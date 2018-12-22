@@ -262,14 +262,20 @@ void ProcessDebugger::performStep(StepCursor &cursor, BreakpointAction action)
 
 void ProcessDebugger::onBreakpointHit()
 {
-	procmsg("[DEBUG] Getting breakpoint at address: 0x%08x\n", getAbsoluteIP(tracer));
-	uint64_t breakpoint_address = getAbsoluteIP(tracer) - 1;
-	Breakpoint &breakpoint = breakpoint_table->getBreakpoint(breakpoint_address);
+	procmsg("[DEBUG] Getting breakpoint at address: 0x%lx\n", getAbsoluteIP(tracer) - 1);
 
-	// DEBUG: Notify that the debug thread is waiting for a breakpoint action
-	procmsg("[BREAKPOINT_ACTION] Waiting for breakpoint action...\n");
+	// TESTING
+	auto libraries = so_observer.getLoadedObjects(tracer, *elf_file, *memory_mappings);
+	for (const auto& name : libraries)
+		procmsg("[SHARED_OBJECT] %s\n", name.c_str());
 
+	onUserBreakpointHit();
+}
+
+void ProcessDebugger::onUserBreakpointHit()
+{
 	// Notify the frontend that a breakpoint has been hit
+	uint64_t breakpoint_address = getAbsoluteIP(tracer) - 1;
 	BreakpointLine line = breakpoint_lines_by_address.at(breakpoint_address);
 	broadcastBreakpointHit(line.file_name, line.line_number);
 
