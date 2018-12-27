@@ -3,7 +3,6 @@
 #include <cstring>
 
 #include <elf.h>
-#include <link.h>
 #include <fcntl.h>
 
 // TODO: REMOVE
@@ -22,20 +21,10 @@ std::vector<std::string> SharedObjectObserver::getLoadedObjects(ProcessTracer& t
 {
 	std::vector<std::string> objects;
 
-	// Get the rendezvous address
-	if (rendezvous_address == 0)
-	{
-		rendezvous_address = getRendezvousAddress(tracer, elf_file, memory_mappings);
-		if (rendezvous_address == 0)
-		{
-			procmsg("[SO_OBSERVER] Rendezvous address not yet set by dynamic linker!\n");
-			return objects;
-		}
-		procmsg("[DYNAMIC_LINKER] Rendezvous at 0x%lx\n", rendezvous_address);
-	}
-
 	// Get the rendezvous object from the target process's memory
-	auto rendezvous = readMemoryChunk<r_debug>(tracer, rendezvous_address);
+	RendezvousPtr rendezvous = getRendezvous(tracer, elf_file, memory_mappings);
+	if (rendezvous == nullptr)
+		return objects;
 
 	// Read the linked list of libraries from the rendezvous map
 	link_map* link_map_addr = rendezvous->r_map;
@@ -51,6 +40,26 @@ std::vector<std::string> SharedObjectObserver::getLoadedObjects(ProcessTracer& t
 	}
 
 	return objects;
+}
+
+SharedObjectObserver::RendezvousPtr SharedObjectObserver::getRendezvous(ProcessTracer& tracer,
+	                                                                      ELFFile& elf_file,
+	                                                                      ProcessMemoryMappings& memory_mappings)
+{
+	// Get the rendezvous address
+	if (rendezvous_address == 0)
+	{
+		rendezvous_address = getRendezvousAddress(tracer, elf_file, memory_mappings);
+		if (rendezvous_address == 0)
+		{
+			procmsg("[SO_OBSERVER] Rendezvous address not yet set by dynamic linker!\n");
+			return nullptr;
+		}
+		procmsg("[SO_OBSERVER] Rendezvous at 0x%lx\n", rendezvous_address);
+	}
+
+	// Get the rendezvous object from the target process's memory
+	return readMemoryChunk<r_debug>(tracer, rendezvous_address);
 }
 
 uint64_t SharedObjectObserver::getRendezvousAddress(ProcessTracer& tracer,
