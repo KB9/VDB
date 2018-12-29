@@ -111,6 +111,7 @@ bool ProcessDebugger::runDebugger()
 
 	memory_mappings = std::make_unique<ProcessMemoryMappings>(tracer.traceePID());
 	createBreakpoints();
+	createEntryBreakpoint();
 
 	breakpoint_table->enableBreakpoints(tracer);
 
@@ -192,6 +193,18 @@ void ProcessDebugger::createBreakpoints()
 	}
 }
 
+void ProcessDebugger::createEntryBreakpoint()
+{
+	uint64_t entry_address = elf_file->entryPoint();
+	if (elf_file->hasPositionIndependentCode())
+	{
+		entry_address += memory_mappings->loadAddress();
+	}
+
+	entry_breakpoint = std::make_unique<Breakpoint>(entry_address);
+	entry_breakpoint->enable(tracer);
+}
+
 void ProcessDebugger::processMessageQueue()
 {
 	while (!message_queue_in.empty())
@@ -269,7 +282,34 @@ void ProcessDebugger::onBreakpointHit()
 	for (const auto& name : libraries)
 		procmsg("[SHARED_OBJECT] %s\n", name.c_str());
 
-	onUserBreakpointHit();
+	uint64_t breakpoint_address = getAbsoluteIP(tracer) - 1;
+	if (entry_breakpoint->addr == breakpoint_address)
+	{
+		onEntryBreakpointHit();
+	}
+	else if (so_observer.getRendezvousBreakpoint()->addr == breakpoint_address)
+	{
+		onRendezvousBreakpointHit();
+	}
+	else
+	{
+		onUserBreakpointHit();
+	}
+}
+
+void ProcessDebugger::onEntryBreakpointHit()
+{
+	so_observer.setRendezvousBreakpoint(tracer, *elf_file, *memory_mappings);
+
+	procmsg("[ENTRY_POINT] Stepping over entry breakpoint!\n");
+	entry_breakpoint->stepOver(tracer);
+}
+
+void ProcessDebugger::onRendezvousBreakpointHit()
+{
+	procmsg("[ENTRY_POINT] Stepping over rendezvous breakpoint!\n");
+	auto& rendezvous_breakpoint = so_observer.getRendezvousBreakpoint();
+	rendezvous_breakpoint->stepOver(tracer);
 }
 
 void ProcessDebugger::onUserBreakpointHit()

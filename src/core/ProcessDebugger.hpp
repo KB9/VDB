@@ -113,6 +113,7 @@ private:
 	std::vector<BreakpointLine> breakpoint_lines;
 	std::map<uint64_t, BreakpointLine> breakpoint_lines_by_address;
 	std::shared_ptr<BreakpointTable> breakpoint_table = nullptr;
+	std::unique_ptr<Breakpoint> entry_breakpoint = nullptr;
 
 	bool is_debugging;
 
@@ -133,8 +134,11 @@ private:
 	bool runDebugger();
 
 	void createBreakpoints();
+	void createEntryBreakpoint();
 
 	void onBreakpointHit();
+	void onEntryBreakpointHit();
+	void onRendezvousBreakpointHit();
 	void onUserBreakpointHit();
 	void processMessageQueue();
 	void broadcastBreakpointHit(const std::string &file_name, uint64_t line_number);
