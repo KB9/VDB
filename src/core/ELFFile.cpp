@@ -10,12 +10,18 @@ ELFFile::ELFFile(std::string path) :
 	file_path(std::move(path))
 {
 	type = getType();
+	entry_point = getEntryPoint();
 	populateSectionAddresses();
 }
 
 std::string ELFFile::filePath() const
 {
 	return file_path;
+}
+
+uint64_t ELFFile::entryPoint() const
+{
+	return entry_point;
 }
 
 bool ELFFile::hasPositionIndependentCode() const
@@ -36,6 +42,35 @@ expected<uint64_t, std::string> ELFFile::sectionAddress(const std::string& secti
 		std::string error = "Section " + section_name + " not found in ELF file: " + file_path;
 		return make_unexpected(error);
 	}
+}
+
+uint64_t ELFFile::getEntryPoint()
+{
+	// Ensure the ELF library initialization doesn't fail
+	assert(elf_version(EV_CURRENT) != EV_NONE);
+
+	// Ensure the executable file can be read successfully
+	int fd = open(file_path.c_str(), O_RDONLY, 0);
+	assert(fd >= 0);
+
+	Elf* elf = elf_begin(fd, ELF_C_READ, NULL);
+	assert(elf != NULL);
+
+	// Ensure the executable is an ELF object
+	assert(elf_kind(elf) == ELF_K_ELF);
+
+	GElf_Ehdr elf_header;
+	if (gelf_getehdr(elf, &elf_header) == NULL)
+	{
+		assert(false);
+	}
+
+	uint64_t entry = elf_header.e_entry;
+
+	elf_end(elf);
+	close(fd);
+
+	return entry;
 }
 
 uint16_t ELFFile::getType()
