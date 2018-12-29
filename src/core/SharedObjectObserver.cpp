@@ -10,7 +10,7 @@ void procmsg(const char *format, ...);
 
 SharedObjectObserver::SharedObjectObserver() :
 	rendezvous_address(0),
-	library_update_address(0)
+	rendezvous_breakpoint(nullptr)
 {
 
 }
@@ -40,6 +40,24 @@ std::vector<std::string> SharedObjectObserver::getLoadedObjects(ProcessTracer& t
 	}
 
 	return objects;
+}
+
+bool SharedObjectObserver::setRendezvousBreakpoint(ProcessTracer& tracer,
+                                                   ELFFile& elf_file,
+                                                   ProcessMemoryMappings& memory_mappings)
+{
+	RendezvousPtr rendezvous = getRendezvous(tracer, elf_file, memory_mappings);
+	if (rendezvous == nullptr)
+		return false;
+
+	rendezvous_breakpoint = std::make_unique<Breakpoint>(rendezvous->r_brk);
+	rendezvous_breakpoint->enable(tracer);
+	return true;
+}
+
+std::unique_ptr<Breakpoint>& SharedObjectObserver::getRendezvousBreakpoint()
+{
+	return rendezvous_breakpoint;
 }
 
 SharedObjectObserver::RendezvousPtr SharedObjectObserver::getRendezvous(ProcessTracer& tracer,

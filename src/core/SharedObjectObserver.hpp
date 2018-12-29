@@ -22,9 +22,14 @@ public:
 	                                          ELFFile& elf_file,
 	                                          ProcessMemoryMappings& memory_mappings);
 
+	bool setRendezvousBreakpoint(ProcessTracer& tracer, ELFFile& elf_file,
+	                             ProcessMemoryMappings& memory_mappings);
+
+	std::unique_ptr<Breakpoint>& getRendezvousBreakpoint();
+
 private:
 	uint64_t rendezvous_address;
-	uint64_t library_update_address;
+	std::unique_ptr<Breakpoint> rendezvous_breakpoint;
 
 	RendezvousPtr getRendezvous(ProcessTracer& tracer, ELFFile& elf_file,
 	                            ProcessMemoryMappings& memory_mappings);
