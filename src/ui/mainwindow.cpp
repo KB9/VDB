@@ -134,7 +134,7 @@ void MainWindow::importExecutable()
     ui->fileTreeWidget->clear();
 
     // Find the associated source files
-    std::shared_ptr<DebugInfo> debug_info = vdb->getDebugInfo();
+    std::shared_ptr<DebugInfo> debug_info = vdb->getELFInfo()->debugInfo();
     ui->fileTreeWidget->populate(debug_info->getSourceFiles());
 
     // Enable the debugging button once the executable's source is loaded

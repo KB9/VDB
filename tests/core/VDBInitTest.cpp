@@ -15,7 +15,7 @@ TEST_CASE("VDB initialization handling")
 
 		REQUIRE(success == false);
 		REQUIRE(vdb.isInitialized() == false);
-		REQUIRE(vdb.getDebugInfo() == nullptr);
+		REQUIRE(vdb.getELFInfo() == nullptr);
 		REQUIRE(vdb.getDebugEngine() == nullptr);
 	}
 
@@ -25,7 +25,7 @@ TEST_CASE("VDB initialization handling")
 
 		REQUIRE(success == true);
 		REQUIRE(vdb.isInitialized() == true);
-		REQUIRE(vdb.getDebugInfo() != nullptr);
+		REQUIRE(vdb.getELFInfo() != nullptr);
 		REQUIRE(vdb.getDebugEngine() != nullptr);
 	}
 }

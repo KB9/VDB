@@ -4,14 +4,15 @@
 
 ProcessTracer::ProcessTracer() :
 	is_stopped(false),
-	is_running(false)
+	is_running(false),
+	process(nullptr)
 {
 
 }
 
 ProcessTracer::ProcessTracer(ProcessTracer&& other)
 {
-	pid = other.pid;
+	process = std::move(other.process);
 	is_stopped = other.is_stopped;
 	is_running = other.is_running;
 }
@@ -28,7 +29,7 @@ bool ProcessTracer::start(const std::string& executable_path)
 	{
 		// Get the ID of the child process, and wait for it to stop on its first
 		// instruction
-		pid = child_pid;
+		process = std::make_unique<Process>(child_pid);
 		::wait(0);
 		is_running = true;
 		return true;
@@ -42,7 +43,7 @@ bool ProcessTracer::start(const std::string& executable_path)
 
 ProcessTracer::Result<ProcessTracer::Signal> ProcessTracer::continueExec()
 {
-	if (ptrace(PTRACE_CONT, pid, 0, 0) < 0)
+	if (ptrace(PTRACE_CONT, process->id(), 0, 0) < 0)
 	{
 		perror("ptrace");
 		return make_unexpected("Failed to continue execution");
@@ -52,7 +53,7 @@ ProcessTracer::Result<ProcessTracer::Signal> ProcessTracer::continueExec()
 
 ProcessTracer::Result<ProcessTracer::Signal> ProcessTracer::singleStepExec()
 {
-	if (ptrace(PTRACE_SINGLESTEP, pid, 0, 0))
+	if (ptrace(PTRACE_SINGLESTEP, process->id(), 0, 0))
 	{
 		perror("ptrace");
 		return make_unexpected("Failed to execute single step");
@@ -63,7 +64,7 @@ ProcessTracer::Result<ProcessTracer::Signal> ProcessTracer::singleStepExec()
 ProcessTracer::Result<user_regs_struct> ProcessTracer::getRegisters()
 {
 	user_regs_struct regs;
-	int result = ptrace(PTRACE_GETREGS, pid, 0, &regs);
+	int result = ptrace(PTRACE_GETREGS, process->id(), 0, &regs);
 	if (result != -1)
 	{
 		return regs;
@@ -76,7 +77,7 @@ ProcessTracer::Result<user_regs_struct> ProcessTracer::getRegisters()
 
 ProcessTracer::Result<void> ProcessTracer::setRegisters(const user_regs_struct& regs)
 {
-	int result = ptrace(PTRACE_SETREGS, pid, 0, &regs);
+	int result = ptrace(PTRACE_SETREGS, process->id(), 0, &regs);
 	if (result != -1)
 	{
 		return {};
@@ -89,7 +90,7 @@ ProcessTracer::Result<void> ProcessTracer::setRegisters(const user_regs_struct& 
 
 ProcessTracer::Result<ProcessTracer::Text> ProcessTracer::peekText(Address address)
 {
-	Text result = ptrace(PTRACE_PEEKTEXT, pid, address, 0);
+	Text result = ptrace(PTRACE_PEEKTEXT, process->id(), address, 0);
 	if (result != -1)
 	{
 		return result;
@@ -102,7 +103,7 @@ ProcessTracer::Result<ProcessTracer::Text> ProcessTracer::peekText(Address addre
 
 ProcessTracer::Result<void> ProcessTracer::pokeText(Address address, Text text)
 {
-	int result = ptrace(PTRACE_POKETEXT, pid, address, text);
+	int result = ptrace(PTRACE_POKETEXT, process->id(), address, text);
 	if (result != -1)
 	{
 		return {};
@@ -113,9 +114,9 @@ ProcessTracer::Result<void> ProcessTracer::pokeText(Address address, Text text)
 	}
 }
 
-pid_t ProcessTracer::traceePID() const
+const std::unique_ptr<Process>& ProcessTracer::tracee() const
 {
-	return pid;
+	return process;
 }
 
 bool ProcessTracer::isStopped() const
@@ -130,7 +131,7 @@ bool ProcessTracer::isRunning() const
 
 ProcessTracer& ProcessTracer::operator=(ProcessTracer&& other)
 {
-	pid = other.pid;
+	process = std::move(other.process);
 	is_stopped = other.is_stopped;
 	is_running = other.is_running;
 }

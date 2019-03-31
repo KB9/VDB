@@ -11,7 +11,6 @@
 #include <condition_variable>
 
 #include "BreakpointTable.hpp"
-#include "DebugInfo.hpp"
 
 #include "ThreadSafeQueue.hpp"
 
@@ -91,7 +90,7 @@ public:
 
 	ProcessDebugger(const std::string& executable_name,
 	                std::vector<BreakpointLine> breakpoint_lines,
-	                std::shared_ptr<DebugInfo> debug_info);
+	                std::shared_ptr<ELFFile> elf_info);
 	~ProcessDebugger();
 
 	void continueExecution();
@@ -105,7 +104,7 @@ public:
 	bool isDebugging();
 
 private:
-	std::shared_ptr<DebugInfo> debug_info = nullptr;
+	std::shared_ptr<ELFFile> elf_info;
 
 	std::string target_name;
 	ProcessTracer tracer;
@@ -125,9 +124,6 @@ private:
 	std::condition_variable cv;
 
 	BreakpointAction breakpoint_action = UNDEFINED;
-
-	std::unique_ptr<ELFFile> elf_file = nullptr;
-	std::unique_ptr<ProcessMemoryMappings> memory_mappings = nullptr;
 
 	SharedObjectObserver so_observer;
 
@@ -149,4 +145,5 @@ private:
 	void getStackTrace(GetStackTraceMessage *stack_msg);
 
 	uint64_t getAbsoluteIP(ProcessTracer& tracer);
+	uint64_t loadAddressOffset();
 };

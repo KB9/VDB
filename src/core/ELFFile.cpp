@@ -7,7 +7,8 @@
 #include <cassert>
 
 ELFFile::ELFFile(std::string path) :
-	file_path(std::move(path))
+	file_path(path),
+	debug_info(std::make_unique<DwarfDebugInfo>(path))
 {
 	type = getType();
 	entry_point = getEntryPoint();
@@ -27,6 +28,11 @@ uint64_t ELFFile::entryPoint() const
 bool ELFFile::hasPositionIndependentCode() const
 {
 	return type == ET_DYN;
+}
+
+const std::shared_ptr<DebugInfo>& ELFFile::debugInfo() const
+{
+	return debug_info;
 }
 
 expected<uint64_t, std::string> ELFFile::sectionAddress(const std::string& section_name) const

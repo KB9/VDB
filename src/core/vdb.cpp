@@ -47,20 +47,20 @@ bool VDB::init(const char *executable_name)
 	if (!isExecutableFile(executable_name))
 		return false;
 
-	// Create the DWARF debug data for this target executable
-	debug_info = DebugInfo::readFrom(executable_name);
+	// Get the info from the ELF file
+	elf_info = std::make_shared<ELFFile>(executable_name);
 
 	// Create the debug engine for debugging the target executable
-	engine = std::make_shared<DebugEngine>(executable_name, debug_info);
+	engine = std::make_shared<DebugEngine>(executable_name, elf_info);
 
 	is_initialized = true;
 
 	return true;
 }
 
-std::shared_ptr<DebugInfo> VDB::getDebugInfo()
+std::shared_ptr<ELFFile> VDB::getELFInfo()
 {
-	return debug_info;
+	return elf_info;
 }
 
 std::shared_ptr<DebugEngine> VDB::getDebugEngine()

@@ -1,8 +1,8 @@
 #include "DebugEngine.hpp"
 
-DebugEngine::DebugEngine(const std::string& executable_name, std::shared_ptr<DebugInfo> debug_info) :
+DebugEngine::DebugEngine(const std::string& executable_name, std::shared_ptr<ELFFile> elf_info) :
 	target_name(executable_name),
-	debug_info(debug_info)
+	elf_info(elf_info)
 {
 
 }
@@ -14,7 +14,7 @@ DebugEngine::~DebugEngine()
 
 bool DebugEngine::run()
 {
-	debugger = std::make_shared<ProcessDebugger>(target_name, breakpoint_lines, debug_info);
+	debugger = std::make_shared<ProcessDebugger>(target_name, breakpoint_lines, elf_info);
 	return true;
 }
 

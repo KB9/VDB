@@ -15,14 +15,12 @@ SharedObjectObserver::SharedObjectObserver() :
 
 }
 
-std::vector<std::string> SharedObjectObserver::getLoadedObjects(ProcessTracer& tracer,
-                                                                ELFFile& elf_file,
-                                                                ProcessMemoryMappings& memory_mappings)
+std::vector<std::string> SharedObjectObserver::getLoadedObjects(ProcessTracer& tracer, ELFFile& elf)
 {
 	std::vector<std::string> objects;
 
 	// Get the rendezvous object from the target process's memory
-	RendezvousPtr rendezvous = getRendezvous(tracer, elf_file, memory_mappings);
+	RendezvousPtr rendezvous = getRendezvous(tracer, elf);
 	if (rendezvous == nullptr)
 		return objects;
 
@@ -42,11 +40,9 @@ std::vector<std::string> SharedObjectObserver::getLoadedObjects(ProcessTracer& t
 	return objects;
 }
 
-bool SharedObjectObserver::setRendezvousBreakpoint(ProcessTracer& tracer,
-                                                   ELFFile& elf_file,
-                                                   ProcessMemoryMappings& memory_mappings)
+bool SharedObjectObserver::setRendezvousBreakpoint(ProcessTracer& tracer, ELFFile& elf)
 {
-	RendezvousPtr rendezvous = getRendezvous(tracer, elf_file, memory_mappings);
+	RendezvousPtr rendezvous = getRendezvous(tracer, elf);
 	if (rendezvous == nullptr)
 		return false;
 
@@ -60,14 +56,12 @@ std::unique_ptr<Breakpoint>& SharedObjectObserver::getRendezvousBreakpoint()
 	return rendezvous_breakpoint;
 }
 
-SharedObjectObserver::RendezvousPtr SharedObjectObserver::getRendezvous(ProcessTracer& tracer,
-	                                                                      ELFFile& elf_file,
-	                                                                      ProcessMemoryMappings& memory_mappings)
+SharedObjectObserver::RendezvousPtr SharedObjectObserver::getRendezvous(ProcessTracer& tracer, ELFFile& elf)
 {
 	// Get the rendezvous address
 	if (rendezvous_address == 0)
 	{
-		rendezvous_address = getRendezvousAddress(tracer, elf_file, memory_mappings);
+		rendezvous_address = getRendezvousAddress(tracer, elf);
 		if (rendezvous_address == 0)
 		{
 			procmsg("[SO_OBSERVER] Rendezvous address not yet set by dynamic linker!\n");
@@ -80,19 +74,17 @@ SharedObjectObserver::RendezvousPtr SharedObjectObserver::getRendezvous(ProcessT
 	return readMemoryChunk<r_debug>(tracer, rendezvous_address);
 }
 
-uint64_t SharedObjectObserver::getRendezvousAddress(ProcessTracer& tracer,
-                                                    ELFFile& elf_file,
-                                                    ProcessMemoryMappings& memory_mappings)
+uint64_t SharedObjectObserver::getRendezvousAddress(ProcessTracer& tracer, ELFFile& elf)
 {
 	// Determine the address of the .dynamic section
-	auto expected_dynamic_section_address = elf_file.sectionAddress(".dynamic");
+	auto expected_dynamic_section_address = elf.sectionAddress(".dynamic");
 	assert(expected_dynamic_section_address.has_value());
 	uint64_t dynamic_section_address = expected_dynamic_section_address.value();
 
-	bool is_pie = elf_file.hasPositionIndependentCode();
+	bool is_pie = elf.hasPositionIndependentCode();
 	if (is_pie)
 	{
-		dynamic_section_address += memory_mappings.loadAddress();
+		dynamic_section_address += tracer.tracee()->mmap().loadAddress();
 	}
 
 	uint64_t address = dynamic_section_address;
@@ -122,7 +114,7 @@ uint64_t SharedObjectObserver::getRendezvousAddress(ProcessTracer& tracer,
 template <typename T>
 std::unique_ptr<T> SharedObjectObserver::readMemoryChunk(ProcessTracer& tracer, uint64_t addr)
 {
-	std::string mem_file = "/proc/" + std::to_string(tracer.traceePID()) + "/mem";
+	std::string mem_file = "/proc/" + std::to_string(tracer.tracee()->id()) + "/mem";
 	int mem_fd = open64(mem_file.c_str(), O_RDONLY);
 	lseek64(mem_fd, addr, SEEK_SET);
 	auto buffer = std::make_unique<T>();

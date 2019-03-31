@@ -4,9 +4,7 @@
 #include <unistd.h>
 #include <memory>
 
-#include "DebugInfo.hpp"
-#include "BreakpointTable.hpp"
-
+#include "ELFFile.hpp"
 #include "DebugEngine.hpp"
 
 class VDB
@@ -18,7 +16,7 @@ public:
 	bool init(const char *executable_name);
 	bool isInitialized();
 
-	std::shared_ptr<DebugInfo> getDebugInfo();
+	std::shared_ptr<ELFFile> getELFInfo();
 	std::shared_ptr<DebugEngine> getDebugEngine();
 
 private:
@@ -26,6 +24,6 @@ private:
 
 	bool isExecutableFile(const char *executable_name);
 
-	std::shared_ptr<DebugInfo> debug_info = nullptr;
+	std::shared_ptr<ELFFile> elf_info = nullptr;
 	std::shared_ptr<DebugEngine> engine = nullptr;
 };

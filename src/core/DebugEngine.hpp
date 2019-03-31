@@ -1,12 +1,9 @@
 #pragma once
 
-#include "BreakpointTable.hpp"
-#include "DebugInfo.hpp"
-#include "ProcessDebugger.hpp"
-
 #include <memory>
 #include <string>
 
+#include "ELFFile.hpp"
 #include "ProcessDebugger.hpp"
 
 // FOWARD DECLARATION [TODO: REMOVE]
@@ -19,7 +16,7 @@ void procmsg(const char* format, ...);
 class DebugEngine
 {
 public:
-	DebugEngine(const std::string& executable_name, std::shared_ptr<DebugInfo> debug_info);
+	DebugEngine(const std::string& executable_name, std::shared_ptr<ELFFile> elf_info);
 	~DebugEngine();
 
 	bool run();
@@ -42,6 +39,6 @@ private:
 	std::string target_name;
 
 	std::shared_ptr<ProcessDebugger> debugger = nullptr;
-	std::shared_ptr<DebugInfo> debug_info = nullptr;
+	std::shared_ptr<ELFFile> elf_info = nullptr;
 	std::vector<BreakpointLine> breakpoint_lines;
 };

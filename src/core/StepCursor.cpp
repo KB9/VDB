@@ -22,7 +22,7 @@ void StepCursor::stepOver(ProcessTracer& tracer)
 	// Single step over the current instruction to avoid getting stuck on a
 	// breakpoint on the same line
 	uint64_t pre_step_address = getCurrentAddress(tracer);
-	uint64_t pre_step_ret_address = getReturnAddress(tracer.traceePID());
+	uint64_t pre_step_ret_address = getReturnAddress(tracer.tracee()->id());
 	tracer.singleStepExec();
 
 	// Create breakpoints on every line of this function apart from the current,
@@ -53,7 +53,7 @@ void StepCursor::stepInto(ProcessTracer& tracer)
 	// Get the current and return addresses, then single step to avoid a
 	// breakpoint set on the current instruction
 	uint64_t pre_step_address = getCurrentAddress(tracer);
-	uint64_t pre_step_ret_address = getReturnAddress(tracer.traceePID());
+	uint64_t pre_step_ret_address = getReturnAddress(tracer.tracee()->id());
 	bool has_made_call = isCallInstruction(pre_step_address, tracer);
 	tracer.singleStepExec();
 
@@ -91,7 +91,7 @@ void StepCursor::stepOut(ProcessTracer& tracer)
 
 	// Get the return address, then single step to avoid a breakpoint set on the
 	// current instruction
-	uint64_t pre_step_ret_address = getReturnAddress(tracer.traceePID());
+	uint64_t pre_step_ret_address = getReturnAddress(tracer.tracee()->id());
 	tracer.singleStepExec();
 
 	// Initialise and enable a breakpoint for the next line after the return

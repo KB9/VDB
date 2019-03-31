@@ -42,11 +42,10 @@ void printProcessSignal(int signal)
 
 ProcessDebugger::ProcessDebugger(const std::string& executable_name,
                                  std::vector<BreakpointLine> breakpoint_lines,
-                                 std::shared_ptr<DebugInfo> debug_info) :
-	debug_info(debug_info),
+                                 std::shared_ptr<ELFFile> elf_info) :
+	elf_info(elf_info),
 	target_name(executable_name),
-	breakpoint_lines(breakpoint_lines),
-	elf_file(std::make_unique<ELFFile>(executable_name))
+	breakpoint_lines(breakpoint_lines)
 {
 	is_debugging = true;
 	debug_thread = std::thread(&ProcessDebugger::runDebugger, this);
@@ -109,7 +108,6 @@ bool ProcessDebugger::runDebugger()
 	if (!is_tracee_started)
 		return false;
 
-	memory_mappings = std::make_unique<ProcessMemoryMappings>(tracer.traceePID());
 	createBreakpoints();
 	createEntryBreakpoint();
 
@@ -166,14 +164,10 @@ void ProcessDebugger::createBreakpoints()
 {
 	breakpoint_table = std::make_unique<BreakpointTable>();
 
-	uint64_t start_address_offset = 0;
-	if (elf_file->hasPositionIndependentCode())
-	{
-		start_address_offset = memory_mappings->loadAddress();
-	}
-
+	uint64_t start_address_offset = loadAddressOffset();
 	for (const auto& bp_line : breakpoint_lines)
 	{
+		const auto& debug_info = elf_info->debugInfo();
 		for (const DebugInfo::SourceLine &line : debug_info->getSourceFileLines(bp_line.file_name))
 		{
 			bool is_match = line.file_name == bp_line.file_name && line.number == bp_line.line_number;
@@ -195,12 +189,7 @@ void ProcessDebugger::createBreakpoints()
 
 void ProcessDebugger::createEntryBreakpoint()
 {
-	uint64_t entry_address = elf_file->entryPoint();
-	if (elf_file->hasPositionIndependentCode())
-	{
-		entry_address += memory_mappings->loadAddress();
-	}
-
+	uint64_t entry_address = elf_info->entryPoint() + loadAddressOffset();
 	entry_breakpoint = std::make_unique<Breakpoint>(entry_address);
 	entry_breakpoint->enable(tracer);
 }
@@ -278,7 +267,7 @@ void ProcessDebugger::onBreakpointHit()
 	procmsg("[DEBUG] Getting breakpoint at address: 0x%lx\n", getAbsoluteIP(tracer) - 1);
 
 	// TESTING
-	auto libraries = so_observer.getLoadedObjects(tracer, *elf_file, *memory_mappings);
+	auto libraries = so_observer.getLoadedObjects(tracer, *elf_info);
 	for (const auto& name : libraries)
 		procmsg("[SHARED_OBJECT] %s\n", name.c_str());
 
@@ -299,7 +288,7 @@ void ProcessDebugger::onBreakpointHit()
 
 void ProcessDebugger::onEntryBreakpointHit()
 {
-	so_observer.setRendezvousBreakpoint(tracer, *elf_file, *memory_mappings);
+	so_observer.setRendezvousBreakpoint(tracer, *elf_info);
 
 	procmsg("[ENTRY_POINT] Stepping over entry breakpoint!\n");
 	entry_breakpoint->stepOver(tracer);
@@ -320,12 +309,7 @@ void ProcessDebugger::onUserBreakpointHit()
 	broadcastBreakpointHit(line.file_name, line.line_number);
 
 	// Create the step cursor at the address the program is currently stopped at
-	uint64_t load_address_offset = 0;
-	if (elf_file->hasPositionIndependentCode())
-	{
-		load_address_offset = memory_mappings->loadAddress();
-	}
-	StepCursor step_cursor(debug_info, breakpoint_table, load_address_offset);
+	StepCursor step_cursor(elf_info->debugInfo(), breakpoint_table, loadAddressOffset());
 
 	// Wait until an action is taken for this particular breakpoint
 	std::unique_lock<std::mutex> lck(mtx);
@@ -363,14 +347,15 @@ void ProcessDebugger::onUserBreakpointHit()
 
 void ProcessDebugger::deduceValue(GetValueMessage *value_msg)
 {
+	const auto& debug_info = elf_info->debugInfo();
 	DebugInfo::Variable var = debug_info->getVariable(value_msg->variable_name,
-	                                                  tracer.traceePID());
+	                                                  tracer.tracee()->id());
 	value_msg->value = var.value;
 }
 
 void ProcessDebugger::getStackTrace(GetStackTraceMessage *stack_msg)
 {
-	Unwinder unwinder(tracer.traceePID());
+	Unwinder unwinder(tracer.tracee()->id());
 	stack_msg->stack = unwinder.traceStack();
 	unwinder.reset();
 }
@@ -382,4 +367,16 @@ uint64_t ProcessDebugger::getAbsoluteIP(ProcessTracer& tracer)
 	assert(expected_regs.has_value());
 	user_regs_struct regs = expected_regs.value();
 	return regs.rip;
+}
+
+uint64_t ProcessDebugger::loadAddressOffset()
+{
+	if (elf_info->hasPositionIndependentCode())
+	{
+		return tracer.tracee()->mmap().loadAddress();
+	}
+	else
+	{
+		return 0;
+	}
 }

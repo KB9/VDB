@@ -8,7 +8,6 @@
 
 #include "Breakpoint.hpp"
 #include "ELFFile.hpp"
-#include "ProcessMemoryMappings.hpp"
 #include "ProcessTracer.hpp"
 
 class SharedObjectObserver
@@ -18,24 +17,17 @@ public:
 
 	SharedObjectObserver();
 
-	std::vector<std::string> getLoadedObjects(ProcessTracer& tracer,
-	                                          ELFFile& elf_file,
-	                                          ProcessMemoryMappings& memory_mappings);
+	std::vector<std::string> getLoadedObjects(ProcessTracer& tracer, ELFFile& info);
 
-	bool setRendezvousBreakpoint(ProcessTracer& tracer, ELFFile& elf_file,
-	                             ProcessMemoryMappings& memory_mappings);
-
+	bool setRendezvousBreakpoint(ProcessTracer& tracer, ELFFile& info);
 	std::unique_ptr<Breakpoint>& getRendezvousBreakpoint();
 
 private:
 	uint64_t rendezvous_address;
 	std::unique_ptr<Breakpoint> rendezvous_breakpoint;
 
-	RendezvousPtr getRendezvous(ProcessTracer& tracer, ELFFile& elf_file,
-	                            ProcessMemoryMappings& memory_mappings);
-	
-	uint64_t getRendezvousAddress(ProcessTracer& tracer, ELFFile& elf_file,
-	                              ProcessMemoryMappings& memory_mappings); 
+	RendezvousPtr getRendezvous(ProcessTracer& tracer, ELFFile& info);
+	uint64_t getRendezvousAddress(ProcessTracer& tracer, ELFFile& info);
 
 	template <typename T>
 	std::unique_ptr<T> readMemoryChunk(ProcessTracer& tracer, uint64_t addr);

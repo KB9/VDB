@@ -1,11 +1,14 @@
 #pragma once
 
 #include <string>
+#include <memory>
 
 #include <sys/ptrace.h>
 #include <sys/types.h>
 #include <sys/user.h>
 #include <unistd.h>
+
+#include "Process.hpp"
 
 #include "expected.hpp"
 
@@ -37,7 +40,7 @@ public:
 	Result<Text> peekText(Address address);
 	Result<void> pokeText(Address address, Text text);
 
-	pid_t traceePID() const;
+	const std::unique_ptr<Process>& tracee() const;
 	bool isStopped() const;
 	bool isRunning() const;
 
@@ -45,7 +48,7 @@ public:
 	ProcessTracer& operator=(ProcessTracer&& other);
 
 private:
-	pid_t pid;
+	std::unique_ptr<Process> process;
 	bool is_stopped;
 	bool is_running;
 

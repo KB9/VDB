@@ -6,11 +6,6 @@
 #include "dwarf/DwarfExprInterpreter.hpp"
 #include "dwarf/ValueDeducer.hpp"
 
-std::shared_ptr<DebugInfo> DebugInfo::readFrom(const std::string &executable_name)
-{
-	return std::make_shared<DwarfDebugInfo>(executable_name);
-}
-
 std::string DebugInfo::toAbsolutePath(const std::string &dir, const std::string &name)
 {
 	// If the file path is relative, the directory it was compiled within
